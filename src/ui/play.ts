@@ -1,5 +1,7 @@
 import { Chess } from 'chess.js';
-import { botMove, engine, LEVELS, levelById, type Level } from '../engine/bot';
+import { botMove, engine, evaluate, LEVELS, levelById, type Level } from '../engine/bot';
+import type { Boss } from '../data/bosses';
+import { parseLine } from '../engine/notation';
 import { buildBook, gradeGame, makeDrill, type Game } from '../engine/importer';
 import { fenKey, sameSan } from '../engine/notation';
 import { currentRd, isProvisional, rate } from '../engine/rating';
@@ -9,6 +11,7 @@ import { push, render, sheet } from './app';
 import { Board } from './board';
 import { clear, figHtml, h, md } from './dom';
 import { topBar } from './learn';
+import { masterCards } from './guess';
 import { movesViewer } from './repertoire';
 import { sound } from './sound';
 
@@ -149,7 +152,7 @@ function recentGames(): HTMLElement | null {
 }
 
 export function renderPlay(host: HTMLElement): void {
-  host.append(topBar('Play'), ratingCard(), setupPanel(), recentGames() ?? h('p.footnote', 'Your games will appear here.'));
+  host.append(topBar('Play'), ratingCard(), setupPanel(), masterCards(), recentGames() ?? h('p.footnote', 'Your games will appear here.'));
   // Start loading the engine in the background so the first move is quick.
   engine.warmUp();
 }
@@ -176,13 +179,23 @@ function reviewGame(g: PlayedGame): void {
 
 // ───────────────────────── The game screen ─────────────────────────
 
-function startGame(side: Side, level: Level, repertoire: boolean): void {
+/** Boss battle: play on from a unit's position against the level recommended for you. */
+export function startBoss(boss: Boss): void {
+  startGame(boss.side, recommendedLevel(), false, boss);
+}
+
+/** A boss game counts as passed unless you lost it. */
+const bossPassed = (result: PlayedGame['result']) => result !== 'loss';
+
+function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss): void {
   const root = document.getElementById('app')!;
   clear(root);
   document.body.classList.add('locked');
   const book = buildBook(side);
-  let rated = true;
+  let rated = !boss;
   let over = false;
+  /** Your moves played since the boss position (boss mode only). */
+  let myMoves = 0;
   let deviatedNoted = false;
   let leftBookNoted = false;
   let lastBookLine: string | undefined;
@@ -197,6 +210,9 @@ function startGame(side: Side, level: Level, repertoire: boolean): void {
     },
   });
 
+  const startMoves = boss ? parseLine(boss.start).moves : [];
+  if (boss) board.load(startMoves);
+
   const coach = h('div.coach-strip');
   const say = (text: string, tone: 'info' | 'good' | 'warn' = 'info') => {
     clear(coach);
@@ -204,6 +220,7 @@ function startGame(side: Side, level: Level, repertoire: boolean): void {
     coach.append(md(text));
   };
   const status = h('span.thinking');
+  const counter = h('span.thinking');
   const movesEl = h('div.game-moves');
   const takeback = h('button.btn.ghost.small-btn', { type: 'button' }, '↶ Takeback');
   const resign = h('button.btn.ghost.small-btn', { type: 'button' }, '⚑ Resign');
@@ -214,16 +231,20 @@ function startGame(side: Side, level: Level, repertoire: boolean): void {
   root.append(
     h(
       'div.session.game',
-      h('header.run-head', close, h('div.game-title', `${level.name} · ~${level.elo}`), h('span')),
+      h('header.run-head', close, h('div.game-title', boss ? `👑 ${boss.name}` : `${level.name} · ~${level.elo}`), h('span')),
       bar(`🤖 ${level.name}`, `~${level.elo}`, status),
       board.el,
-      bar(myName, `~${state.rating.r}${isProvisional(state.rating) ? '?' : ''}`),
+      bar(myName, `~${state.rating.r}${isProvisional(state.rating) ? '?' : ''}`, counter),
       coach,
       movesEl,
-      h('div.game-controls', takeback, resign),
+      h('div.game-controls', boss ? null : takeback, resign),
     ),
   );
-  say(
+  if (boss) {
+    say(
+      `**Boss battle.** ${boss.brief}\n\nWin, or still be standing after **${boss.moves} of your moves** (no worse than −1.5 by the engine’s count), to earn the crown.`,
+    );
+  } else say(
     repertoire
       ? `Opening practice: the computer will play into your **${side === 'w' ? 'White' : 'Black'}** repertoire. Play your moves, and I’ll say when either of you leaves it.`
       : `Good luck! Remember the three jobs: center, develop, castle.`,
@@ -259,7 +280,36 @@ function startGame(side: Side, level: Level, repertoire: boolean): void {
       }
     }
     showMoves();
-    if (!checkEnd()) setTimeout(botTurn, 250);
+    if (checkEnd()) return;
+    if (boss) {
+      myMoves++;
+      counter.textContent = `${myMoves} / ${boss.moves}`;
+      if (myMoves >= boss.moves) {
+        void judgeBoss();
+        return;
+      }
+    }
+    setTimeout(botTurn, 250);
+  }
+
+  /** After your last boss move: let the engine decide whether you're still standing. */
+  async function judgeBoss(): Promise<void> {
+    thinking = true;
+    board.setInteractive(false);
+    say('Time! The engine is judging the position…');
+    let mine = 0;
+    try {
+      // It's the computer's move, so flip the sign to get your point of view.
+      mine = -(await evaluate(board.chess.fen(), 12));
+    } catch {
+      mine = 0;
+    }
+    thinking = false;
+    const pawns = (mine / 100).toFixed(1);
+    const shown = mine > 0 ? `+${pawns}` : pawns;
+    if (mine >= 300) finish('win', `a winning position (${shown}) after ${boss!.moves} moves`);
+    else if (mine >= -150) finish('draw', `still standing after ${boss!.moves} moves (${shown})`);
+    else finish('loss', `a losing position (${shown}) after ${boss!.moves} moves`);
   }
 
   async function botTurn(): Promise<void> {
@@ -350,16 +400,38 @@ function startGame(side: Side, level: Level, repertoire: boolean): void {
       moves,
       rated,
       delta,
-      opening: lastBookLine,
+      opening: boss ? `👑 ${boss.name}` : lastBookLine,
     };
     state.games = [...state.games, game].slice(-200);
-    addXp(moves.length >= 10 ? 10 : 3);
+    let crown = false;
+    if (boss) {
+      const rec = state.bosses[boss.unitId] ?? { beaten: false, attempts: 0 };
+      rec.attempts++;
+      if (bossPassed(result) && !rec.beaten) {
+        rec.beaten = true;
+        rec.beatenAt = Date.now();
+        crown = true;
+      }
+      state.bosses[boss.unitId] = rec;
+      addXp(bossPassed(result) ? 30 : 5);
+    } else addXp(moves.length >= 10 ? 10 : 3);
     save();
     (result === 'win' ? sound.finish : result === 'loss' ? sound.wrong : sound.correct)();
 
-    const title = result === 'win' ? 'You won! 🏆' : result === 'loss' ? 'You lost' : 'Draw';
-    const sub = `${reason[0].toUpperCase()}${reason.slice(1)} · ${Math.ceil(moves.length / 2)} moves`;
-    const rematch = h('button.btn.primary.wide', { type: 'button' }, 'Rematch');
+    const title = boss
+      ? bossPassed(result)
+        ? crown
+          ? 'Crown earned! 👑'
+          : 'Boss defeated again! 👑'
+        : 'The boss wins this time'
+      : result === 'win'
+        ? 'You won! 🏆'
+        : result === 'loss'
+          ? 'You lost'
+          : 'Draw';
+    const played = Math.ceil((moves.length - startMoves.length) / 2);
+    const sub = `${reason[0].toUpperCase()}${reason.slice(1)} · ${played} moves`;
+    const rematch = h('button.btn.primary.wide', { type: 'button' }, boss ? 'Try again' : 'Rematch');
     const review = h('button.btn.ghost.wide', { type: 'button' }, 'Review game');
     const done = h('button.btn.ghost.wide', { type: 'button' }, 'Done');
     const closeSheet = sheet(
@@ -369,7 +441,8 @@ function startGame(side: Side, level: Level, repertoire: boolean): void {
         h('p.muted', sub),
         rated
           ? h('div.rating-change', `Rating ${before} → `, h('b', String(state.rating.r)), h(`span.delta${delta! >= 0 ? '.up' : '.down'}`, ` ${delta! >= 0 ? '+' : ''}${delta}`))
-          : h('p.muted', 'Unrated: a takeback was used.'),
+          : h('p.muted', boss ? 'Boss battles don’t change your rating.' : 'Unrated: a takeback was used.'),
+        boss && !bossPassed(result) ? md('Review the game to see where it turned, then try again. Every attempt earns XP.') : null,
         lastBookLine ? h('p', `Opening: ${lastBookLine}`) : null,
         drillNote ? md(drillNote) : null,
         h('div.stack', rematch, review, done),
@@ -382,7 +455,7 @@ function startGame(side: Side, level: Level, repertoire: boolean): void {
     };
     rematch.addEventListener('click', () => {
       leave();
-      startGame(side, level, repertoire);
+      startGame(side, level, repertoire, boss);
     });
     review.addEventListener('click', () => {
       leave();
@@ -424,6 +497,10 @@ function startGame(side: Side, level: Level, repertoire: boolean): void {
   resign.addEventListener('click', quit);
   close.addEventListener('click', quit);
 
-  if (side === 'b') setTimeout(botTurn, 400);
-  else board.setInteractive(true);
+  if (boss) counter.textContent = `0 / ${boss.moves}`;
+  if (board.chess.turn() !== side) setTimeout(botTurn, 400);
+  else {
+    board.setInteractive(true);
+    if (boss) counter.textContent = `0 / ${boss.moves}`;
+  }
 }

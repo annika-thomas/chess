@@ -2,8 +2,10 @@ import { UNITS, LESSONS, isCard, type LessonRef } from '../data';
 import { advise, buildReview, buildUnitReview, buildWeakSpotDrill, isLessonDone, isUnlocked, nextLesson, unitStrength } from '../engine/coach';
 import { currentStreak, state, xpToday } from '../engine/store';
 import type { Lesson } from '../types';
+import { bossFor, type Boss } from '../data/bosses';
 import { sheet, startSession } from './app';
-import { h } from './dom';
+import { recommendedLevel, startBoss } from './play';
+import { h, md } from './dom';
 
 export function lessonItems(lesson: Lesson) {
   return lesson.exercises.map((exercise, i) => ({
@@ -71,6 +73,42 @@ function lessonSheet(ref: LessonRef): void {
 
 const OFFSETS = [0, 38, 58, 38, 0, -38, -58, -38];
 
+/** The castle at the end of a unit: play on from the unit's position for its crown. */
+function bossNode(boss: Boss, unitDone: boolean, offset: number): HTMLElement {
+  const rec = state.bosses[boss.unitId];
+  const beaten = !!rec?.beaten;
+  const node = h(
+    `button.node.boss${beaten ? '.done' : ''}${unitDone && !beaten ? '.ready' : ''}${unitDone || beaten ? '' : '.locked'}`,
+    { type: 'button', style: `transform:translateX(${offset}px)`, 'aria-label': `Boss: ${boss.name}` },
+    h('span.node-icon', beaten ? '👑' : '🏰'),
+  );
+  node.addEventListener('click', () => bossSheet(boss, unitDone));
+  return h('div.node-wrap', node, h('div.node-label', { style: `transform:translateX(${offset}px)` }, `Boss: ${boss.name}`));
+}
+
+function bossSheet(boss: Boss, unitDone: boolean): void {
+  const rec = state.bosses[boss.unitId];
+  const level = recommendedLevel();
+  const go = h('button.btn.primary.wide', { type: 'button' }, rec?.beaten ? 'Play again' : unitDone ? 'Challenge the boss' : 'Challenge anyway');
+  const content = h(
+    'div.lesson-sheet',
+    h('div.unit-name', { style: 'color:var(--gold)' }, rec?.beaten ? '👑 Crown earned' : '🏰 Boss battle'),
+    h('h2', boss.name),
+    md(boss.brief),
+    md(
+      `You play **${boss.side === 'w' ? 'White' : 'Black'}** against **${level.name} (~${level.elo})**, the level closest to your rating. Win, or still be standing after **${boss.moves} moves**, to earn the crown.`,
+    ),
+    rec ? h('p.muted', `Attempts: ${rec.attempts}`) : null,
+    !unitDone && !rec?.beaten ? h('p.muted', 'Tip: finish the unit’s lessons first. The boss tests exactly those ideas.') : null,
+    go,
+  );
+  const close = sheet(content);
+  go.addEventListener('click', () => {
+    close();
+    startBoss(boss);
+  });
+}
+
 function unitBlock(unitIndex: number): HTMLElement {
   const unit = UNITS[unitIndex];
   const refs = LESSONS.filter((l) => l.unit.id === unit.id);
@@ -82,7 +120,7 @@ function unitBlock(unitIndex: number): HTMLElement {
     'div.unit-banner',
     { style: `background:${unit.color}` },
     h('div', h('div.unit-kicker', `Unit ${unitIndex + 1}`), h('h3', unit.title), h('p', unit.subtitle)),
-    h('div.unit-icon', unit.icon),
+    h('div.unit-icon', state.bosses[unit.id]?.beaten ? '👑' : unit.icon),
   );
   if (strength !== undefined) {
     banner.append(
@@ -113,6 +151,8 @@ function unitBlock(unitIndex: number): HTMLElement {
     node.addEventListener('click', () => lessonSheet(ref));
     path.append(wrap);
   });
+  const boss = bossFor(unit.id);
+  if (boss) path.append(bossNode(boss, allDone, OFFSETS[refs.length % OFFSETS.length]));
   return h('section.unit', { id: `unit-${unit.id}` }, banner, path);
 }
 

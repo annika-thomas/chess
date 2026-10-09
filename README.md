@@ -35,6 +35,11 @@ The **Play** tab runs [Stockfish 19](https://github.com/nmrugg/stockfish.js) (li
 - **Opening practice**: the computer steers into your repertoire, and a coach line says when you are in book and when either side leaves it. Your slips become drills.
 - **Rating estimate**: Glicko-1 over your results against the levels, shown with a 95% range. Ratings found in imported Lichess or Chess.com games are shown alongside it.
 
+## Think like a master
+
+- **Guess the Move** (Play tab): six classic games (Réti–Tartakower, Morphy's Opera Game, Lasker–Thomas, the Evergreen, the Immortal, Marshall's "gold coins" game). You play the winner's moves: 3 points for the master's move, 2 or 1 for alternatives the engine rates as nearly as good, and an annotation for every key moment. Every move is checked legal in tests, and the five mating games are checked to end in mate.
+- **Boss battles**: each repertoire unit ends in a 🏰 castle. Play on from the unit's main-line position against the level closest to your rating. Win, or still be standing after 20 moves (engine eval no worse than −1.5), to earn the unit's 👑 crown.
+
 ## Made for you
 
 - **Coach card**: picks your best next step: due reviews, then your weakest concept, then your next lesson.

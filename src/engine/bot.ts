@@ -38,6 +38,9 @@ export const LEVELS: Level[] = [
 
 export const levelById = (id: number) => LEVELS.find((l) => l.id === id) ?? LEVELS[2];
 
+/** Search settings: a Level works here, or an ad-hoc `{ depth: 10 }`. */
+export type Search = Pick<Level, 'depth' | 'movetime' | 'multipv' | 'uciElo'>;
+
 interface Line {
   move: string;
   /** Centipawns from the side to move's point of view (mates mapped to ±100000). */
@@ -92,7 +95,7 @@ class Engine {
   }
 
   /** Top lines for a position. Calls are serialized so searches never overlap. */
-  analyse(fen: string, level: Level): Promise<Line[]> {
+  analyse(fen: string, level: Search): Promise<Line[]> {
     const run = async () => {
       await this.boot();
       const limited = level.uciElo !== undefined;
@@ -135,6 +138,29 @@ class Engine {
 }
 
 export const engine = new Engine();
+
+const clampScore = (s: number) => Math.max(-2000, Math.min(2000, s));
+
+/**
+ * How many centipawns worse `san` is than the engine's best move in this position (0 = as good as best).
+ * Used to give credit for strong alternatives in Guess the Move.
+ */
+export async function moveLoss(fen: string, san: string, depth = 10): Promise<number> {
+  const [best] = await engine.analyse(fen, { depth, multipv: 1 });
+  const after = new Chess(fen);
+  after.move(san);
+  if (after.isCheckmate()) return 0;
+  if (after.isDraw()) return Math.max(0, clampScore(best?.score ?? 0));
+  const [reply] = await engine.analyse(after.fen(), { depth: depth - 1, multipv: 1 });
+  const mine = -(reply?.score ?? 0);
+  return Math.max(0, clampScore(best?.score ?? 0) - clampScore(mine));
+}
+
+/** Evaluation in centipawns from the side to move's point of view. */
+export async function evaluate(fen: string, depth = 12): Promise<number> {
+  const [best] = await engine.analyse(fen, { depth, multipv: 1 });
+  return clampScore(best?.score ?? 0);
+}
 
 /** Choose the bot's move (UCI, e.g. "e2e4") for a level, applying the beginner handicap. */
 export async function botMove(fen: string, level: Level, rand = Math.random): Promise<string> {

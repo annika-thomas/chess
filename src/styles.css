@@ -1583,3 +1583,71 @@ cg-board square.mentor-target {
   vertical-align: -0.08em;
   margin-right: 0.04em;
 }
+
+/* ───── Boss battles & Guess the Move ───── */
+.node.boss {
+  --c: #5c3a1c;
+  width: 84px;
+  height: 76px;
+  border-radius: 22px;
+  background: radial-gradient(circle at 35% 28%, rgba(255, 255, 255, 0.22), transparent 55%), linear-gradient(#8b5a2b, #5c3a1c);
+  box-shadow: 0 7px 0 #3a2410;
+  font-size: 34px;
+}
+.node.boss.locked {
+  background: var(--locked);
+  box-shadow: 0 7px 0 var(--line);
+  opacity: 0.8;
+}
+.node.boss.ready {
+  outline: 4px solid rgba(230, 180, 34, 0.55);
+  outline-offset: 4px;
+  animation: pulse-gold 1.8s infinite;
+}
+@keyframes pulse-gold {
+  50% {
+    outline-color: rgba(230, 180, 34, 0.15);
+  }
+}
+.node.boss.done {
+  background: radial-gradient(circle at 35% 28%, rgba(255, 255, 255, 0.35), transparent 55%), var(--gold);
+  box-shadow: 0 7px 0 var(--gold-dark);
+}
+.result-dot.master {
+  background: var(--wood);
+  font-size: 18px;
+}
+.guess-score {
+  min-width: 56px;
+  text-align: right;
+  font-weight: 800;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+.guess-bubble {
+  margin: 10px 16px 0;
+  max-height: 30dvh;
+  overflow-y: auto;
+}
+.verdict {
+  font-weight: 800;
+  padding: 8px 12px;
+  border-radius: 10px;
+  margin-bottom: 8px;
+  background: var(--card);
+}
+.verdict.good,
+.verdict.ok {
+  color: #9ccc65;
+  background: var(--green-bg);
+}
+.verdict.bad {
+  color: #ff9d92;
+  background: var(--red-bg);
+}
+.note.prompt-note {
+  border-color: var(--gold);
+}
+.game-controls .btn.primary {
+  flex: 2;
+}

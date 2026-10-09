@@ -104,6 +104,10 @@ export interface State {
   settings: { sound: boolean; haptics: boolean; showCoords: boolean; labelSquares: boolean; figurines: boolean };
   /** Best Coordinate Sprint scores by orientation. */
   sprintBest: { w: number; b: number };
+  /** Guess the Move: best score per master game. */
+  masters: Record<string, { best: number; max: number; plays: number }>;
+  /** Boss battles by unit id. */
+  bosses: Record<string, { beaten: boolean; attempts: number; beatenAt?: number }>;
 }
 
 const KEY = 'chess-mentor.v1';
@@ -136,6 +140,8 @@ function fresh(): State {
     play: { level: 3, side: 'w', repertoire: true },
     settings: { sound: true, haptics: true, showCoords: true, labelSquares: false, figurines: true },
     sprintBest: { w: 0, b: 0 },
+    masters: {},
+    bosses: {},
   };
 }
 
