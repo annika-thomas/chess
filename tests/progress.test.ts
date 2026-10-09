@@ -1,25 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { LESSONS, lessonRef } from '../src/data';
+import { lessonRef } from '../src/data';
 import { isUnlocked, nextLesson } from '../src/engine/coach';
 import { state } from '../src/engine/store';
 
-describe('progress after new units are added', () => {
-  it('keeps earlier progress and does not re-lock reached lessons', () => {
-    // Saved progress from before Board Basics existed: the first three principles lessons done.
-    for (const id of ['principles-center', 'principles-develop', 'principles-king']) {
-      state.lessons[id] = { completedAt: 1, mistakes: 0, runs: 1 };
-    }
-    // The new first unit is suggested next...
-    expect(nextLesson()?.lesson.id).toBe('basics-grid');
-    // ...but everything already reached stays open, including the next unreached principles lesson.
-    for (const id of ['principles-center', 'principles-develop', 'principles-king', 'principles-tempo']) {
-      expect(isUnlocked(lessonRef(id)!), id).toBe(true);
-    }
-    // Lessons further ahead are still locked.
-    const later = LESSONS.find((l) => l.lesson.id === 'survive-f7')!;
-    expect(isUnlocked(later)).toBe(false);
-    // Basics lessons are open (they come before the frontier).
-    expect(isUnlocked(lessonRef('basics-speed')!)).toBe(true);
+describe('progress after the course is restructured', () => {
+  it('keeps every lesson you have done open, and gates the rest strictly in order', () => {
+    // Saved progress from earlier versions: Board Basics and three principles lessons done.
+    const done = ['basics-grid', 'basics-speed', 'basics-pieces', 'basics-symbols', 'basics-reading', 'principles-center', 'principles-develop', 'principles-king'];
+    for (const id of done) state.lessons[id] = { completedAt: 1, mistakes: 0, runs: 1 };
+    // Everything already done stays open.
+    for (const id of done) expect(isUnlocked(lessonRef(id)!), id).toBe(true);
+    // The next new lesson in Level 1 is open and suggested...
+    expect(nextLesson()?.lesson.id).toBe('tactics-values');
+    expect(isUnlocked(lessonRef('tactics-values')!)).toBe(true);
+    // ...and later unfinished lessons wait for it (strict order).
+    expect(isUnlocked(lessonRef('principles-tempo')!)).toBe(false);
+    expect(isUnlocked(lessonRef('skewer')!)).toBe(false);
     state.lessons = {};
   });
 });

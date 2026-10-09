@@ -85,6 +85,19 @@ export interface PlayedGame {
   opening?: string;
 }
 
+export interface SetRecord {
+  attempts: number;
+  bestAccuracy: number;
+  /** Best average seconds per puzzle among runs that passed. */
+  bestSeconds?: number;
+  /** Reached the pass mark (80%) at least once. */
+  mastered: boolean;
+  /** Runs that hit 85% at ≤15 s per puzzle (Woodpecker-style cycles). */
+  fluentRuns: number;
+  lastAt: number;
+  lastAccuracy: number;
+}
+
 export interface State {
   v: 1;
   profile: Profile;
@@ -106,6 +119,8 @@ export interface State {
   sprintBest: { w: number; b: number };
   /** Guess the Move: best score per master game. */
   masters: Record<string, { best: number; max: number; plays: number }>;
+  /** Puzzle sets: best results and mastery. */
+  sets: Record<string, SetRecord>;
   /** Boss battles by unit id. */
   bosses: Record<string, { beaten: boolean; attempts: number; beatenAt?: number }>;
 }
@@ -141,6 +156,7 @@ function fresh(): State {
     settings: { sound: true, haptics: true, showCoords: true, labelSquares: false, figurines: true },
     sprintBest: { w: 0, b: 0 },
     masters: {},
+    sets: {},
     bosses: {},
   };
 }

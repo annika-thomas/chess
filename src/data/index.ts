@@ -7,21 +7,134 @@ import { patternGym } from './patterns';
 import { tactics } from './tactics';
 import { beyond, italian, punish } from './white';
 
-export const UNITS: Unit[] = [
-  basics,
-  principles,
-  tactics,
-  survive,
-  italian,
-  punish,
-  beyond,
-  blackItalian,
-  ruyScotch,
-  otherE4,
-  qgd,
-  carlsbad,
-  vsSystems,
-  patternGym,
+import {
+  backRank,
+  checkEscape,
+  doubleCheck,
+  f7Attacks,
+  forksWithCheck,
+  mateInOne,
+  mateInTwo,
+  mateWithQueen,
+  opposition,
+  pawnSquare,
+  removeDefender,
+  rookMate,
+  safetyCheck,
+  skewer,
+} from './fundamentals';
+
+/**
+ * The course in three levels (after the Steps Method: Step 1 ≈ 800, Step 2 ≈ 1200). Lessons keep their
+ * ids when they move between units, so saved progress and review cards survive restructuring.
+ */
+const lesson = (units: Unit[], id: string): Lesson => {
+  for (const u of units) {
+    const l = u.lessons.find((x) => x.id === id);
+    if (l) return l;
+  }
+  throw new Error(`lesson ${id} not found`);
+};
+const old = [principles, survive, tactics];
+const withPractice = (l: Lesson, practice: string): Lesson => ({ ...l, practice });
+
+const L1 = 'Level 1 · Foundations';
+const L2 = 'Level 2 · Tactics & Endgames';
+const L3 = 'Level 3 · Your Repertoire';
+
+const level1: Unit[] = [
+  { ...basics, section: L1 },
+  {
+    id: 'safety',
+    title: 'Material & Safety',
+    subtitle: 'What pieces are worth, and never hanging them',
+    section: L1,
+    color: '#6f8f4e',
+    icon: 'icon:shield',
+    lessons: [withPractice(lesson(old, 'tactics-values'), 'hanging'), safetyCheck, lesson(old, 'survive-blunder')],
+  },
+  {
+    id: 'checkmate',
+    title: 'Checkmate',
+    subtitle: 'Escaping check, mating patterns, mating with the queen',
+    section: L1,
+    color: '#7b3f3f',
+    icon: '♛',
+    lessons: [checkEscape, mateInOne, backRank, lesson(old, 'survive-scholar'), mateWithQueen],
+  },
+  { ...principles, section: L1, lessons: [...principles.lessons, lesson(old, 'survive-f7')] },
+  {
+    id: 'double-attack',
+    title: 'Double Attack',
+    subtitle: 'Forks: one piece, two targets',
+    section: L1,
+    color: '#a8642c',
+    icon: '♞',
+    lessons: [withPractice(lesson(old, 'tactics-fork'), 'fork-1'), forksWithCheck],
+  },
+];
+
+const level2: Unit[] = [
+  {
+    id: 'pins',
+    title: 'Pins & Skewers',
+    subtitle: 'Pieces stuck on a line',
+    section: L2,
+    color: '#566a80',
+    icon: '♝',
+    lessons: [withPractice(lesson(old, 'tactics-pin'), 'pin'), skewer],
+  },
+  {
+    id: 'discoveries',
+    title: 'Discoveries',
+    subtitle: 'Discovered attacks and double check',
+    section: L2,
+    color: '#44705a',
+    icon: 'icon:bolt',
+    lessons: [withPractice(lesson(old, 'tactics-discovery'), 'discovered'), doubleCheck],
+  },
+  {
+    id: 'combinations',
+    title: 'Combinations',
+    subtitle: 'Removing the defender, mate in two, f7',
+    section: L2,
+    color: '#7d4a63',
+    icon: 'icon:target',
+    lessons: [removeDefender, mateInTwo, f7Attacks],
+  },
+  {
+    id: 'endgames',
+    title: 'Endgame Basics',
+    subtitle: 'Rook mate, the square, the opposition',
+    section: L2,
+    color: '#7a6a4f',
+    icon: '♚',
+    lessons: [rookMate, pawnSquare, opposition],
+  },
+];
+
+const level3: Unit[] = [italian, punish, beyond, blackItalian, ruyScotch, otherE4, qgd, carlsbad, vsSystems, patternGym].map((u) => ({
+  ...u,
+  section: L3,
+}));
+
+export const UNITS: Unit[] = [...level1, ...level2, ...level3];
+
+export interface Level {
+  title: string;
+  /** Roughly where this level takes you. */
+  target: string;
+  units: string[];
+  /** Mixed test that unlocks the next level (80%). */
+  test?: string;
+  /** Unlabelled review set assigned as homework during the NEXT level (Steps "Mix"). */
+  mix?: string;
+}
+
+export const LEVELS: Level[] = [
+  { title: L1, target: '~800', units: level1.map((u) => u.id), test: 'level1-test', mix: 'mix-1' },
+  { title: L2, target: '~1200', units: level2.map((u) => u.id), test: 'level2-test', mix: 'mix-2' },
+  { title: L3, target: '1200+', units: level3.map((u) => u.id) },
 ];
 
 export interface LessonRef {

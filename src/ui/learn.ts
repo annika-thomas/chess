@@ -1,5 +1,8 @@
-import { UNITS, LESSONS, isCard, type LessonRef } from '../data';
-import { advise, buildReview, buildUnitReview, buildWeakSpotDrill, isLessonDone, isUnlocked, nextLesson, unitStrength } from '../engine/coach';
+import { UNITS, LESSONS, LEVELS, isCard, type LessonRef } from '../data';
+import { currentStep, lessonComplete, levelReadyForTest, levelUnlocked, practiceMastered } from '../engine/levels';
+import { getSet, PASS } from '../engine/puzzles';
+import { runPuzzleSet } from './puzzleRun';
+import { advise, buildReview, buildUnitReview, buildWeakSpotDrill, isLessonDone, isUnlocked, unitStrength } from '../engine/coach';
 import { currentStreak, state, xpToday } from '../engine/store';
 import type { Lesson } from '../types';
 import { bossFor, type Boss } from '../data/bosses';
@@ -49,27 +52,85 @@ function coachCard(): HTMLElement {
     if (act.kind === 'lesson') startLesson(act.ref);
     else if (act.kind === 'review') startSession('Daily review', buildReview(), 'practice');
     else if (act.kind === 'weak') startSession(act.spot.label, buildWeakSpotDrill(act.spot.tag), 'practice');
+    else if (act.kind === 'set') openSet(act.setId);
   });
   return h('section.coach', h('div.avatar', '♞'), h('div.coach-body', h('h2', a.headline), h('p', a.body), btn));
+}
+
+/** Open a puzzle set: practice first, then timed reruns once it's mastered. Tests and mixes get no theme hint. */
+export function openSet(setId: string): void {
+  getSet(setId)
+    .then((set) => {
+      if (!set) {
+        alert('This puzzle set isn’t available yet: the puzzle library is still being imported.');
+        return;
+      }
+      const unlabelled = setId.includes('test') || setId.startsWith('mix') || setId === 'daily';
+      runPuzzleSet({ set, mode: state.sets[setId]?.mastered ? 'cycle' : unlabelled ? 'test' : 'practice', hint: unlabelled ? undefined : set.title });
+    })
+    .catch(() => alert('Couldn’t load the puzzles. Try reopening the app.'));
+}
+
+function setStatus(setId: string): string {
+  const rec = state.sets[setId];
+  if (!rec) return `Pass at ${Math.round(PASS * 100)}% to unlock the next lesson`;
+  if (rec.mastered) return `Passed · best ${Math.round(rec.bestAccuracy * 100)}%${rec.fluentRuns ? ` · fluent ×${rec.fluentRuns}` : ''}`;
+  return `Best ${Math.round(rec.bestAccuracy * 100)}% · need ${Math.round(PASS * 100)}%`;
 }
 
 function lessonSheet(ref: LessonRef): void {
   const done = isLessonDone(ref.lesson.id);
   const open = isUnlocked(ref);
-  const go = h('button.btn.primary.wide', { type: 'button' }, done ? 'Practice again (+XP)' : open ? 'Start lesson' : 'Jump ahead to here');
+  const practice = ref.lesson.practice;
+  const needsPractice = done && practice && !practiceMastered(practice);
+  const go = h(`button.btn.${needsPractice ? 'ghost' : 'primary'}.wide`, { type: 'button' }, done ? 'Redo the lesson (+XP)' : 'Start lesson');
+  const set = practice ? h(`button.btn.${needsPractice ? 'primary' : 'ghost'}.wide`, { type: 'button', disabled: !done }, done ? 'Practice set' : 'Practice set (after the lesson)') : null;
   const content = h(
     'div.lesson-sheet',
     h('div.unit-name', { style: `color:${ref.unit.color}` }, ref.unit.title),
     h('h2', ref.lesson.title),
     h('p', ref.lesson.goal),
-    !open ? h('p.muted', 'This is ahead of your path. You can jump here, but earlier lessons build the patterns it relies on.') : null,
-    go,
+    practice ? h('p.muted', icon('target'), ` Practice set: ${setStatus(practice)}`) : null,
+    open
+      ? h('div.stack', set && needsPractice ? set : null, go, set && !needsPractice ? set : null)
+      : h('p.muted', icon('lock'), ' Locked. Finish the lessons before it, including their practice sets. A coach wouldn’t skip you ahead, and the patterns build on each other.'),
   );
   const close = sheet(content);
   go.addEventListener('click', () => {
     close();
     startLesson(ref);
   });
+  set?.addEventListener('click', () => {
+    close();
+    openSet(practice!);
+  });
+}
+
+/** End-of-level mixed test: unlocks the next level at 80%. */
+function levelTestCard(index: number): HTMLElement | null {
+  const lvl = LEVELS[index];
+  if (!lvl.test) return null;
+  const rec = state.sets[lvl.test];
+  const ready = levelUnlocked(index) && levelReadyForTest(index);
+  const btn = h('button.btn.primary', { type: 'button', disabled: !ready }, rec?.mastered ? 'Retake for a better score' : ready ? 'Take the test' : 'Finish the level first');
+  btn.addEventListener('click', () => openSet(lvl.test!));
+  return h(
+    'section.level-test',
+    h('div.sheet-art', icon(rec?.mastered ? 'trophy' : ready ? 'target' : 'lock')),
+    h('h3', `${lvl.title.split(' · ')[0]} test`),
+    h('p.muted', rec?.mastered ? `Passed with ${Math.round(rec.bestAccuracy * 100)}%. The next level is open.` : `30 mixed puzzles, no hints. Pass at ${Math.round(PASS * 100)}% to unlock the next level.`),
+    btn,
+  );
+}
+
+function levelHeader(index: number): HTMLElement {
+  const lvl = LEVELS[index];
+  const open = levelUnlocked(index);
+  return h(
+    `div.level-header${open ? '' : '.locked'}`,
+    h('div', h('h4', lvl.title), h('small.muted', `Target: ${lvl.target}${open ? '' : ` · pass the ${LEVELS[index - 1].title.split(' · ')[0]} test to unlock`}`)),
+    open ? null : icon('lock'),
+  );
 }
 
 const OFFSETS = [0, 38, 58, 38, 0, -38, -58, -38];
@@ -115,8 +176,6 @@ function unitBlock(unitIndex: number): HTMLElement {
   const refs = LESSONS.filter((l) => l.unit.id === unit.id);
   const allDone = refs.every((r) => isLessonDone(r.lesson.id));
   const strength = unitStrength(unit.id);
-  const next = nextLesson();
-
   const banner = h(
     'div.unit-banner',
     { style: `background:${unit.color}` },
@@ -139,16 +198,20 @@ function unitBlock(unitIndex: number): HTMLElement {
   }
 
   const path = h('div.path');
+  const step = currentStep();
   refs.forEach((ref, i) => {
-    const done = isLessonDone(ref.lesson.id);
-    const current = next?.lesson.id === ref.lesson.id;
+    const learned = isLessonDone(ref.lesson.id);
+    const done = lessonComplete(ref);
+    const half = learned && !done;
+    const current = !!step && 'ref' in step && step.ref.lesson.id === ref.lesson.id;
     const locked = !isUnlocked(ref);
     const node = h(
-      `button.node${done ? '.done' : ''}${current ? '.current' : ''}${locked ? '.locked' : ''}`,
+      `button.node${done ? '.done' : ''}${half ? '.half' : ''}${current ? '.current' : ''}${locked ? '.locked' : ''}`,
       { type: 'button', style: `--c:${unit.color};transform:translateX(${OFFSETS[i % OFFSETS.length]}px)`, 'aria-label': ref.lesson.title },
-      h('span.node-icon', done ? icon('starCream') : locked ? icon('lock') : unitIcon(unit.icon)),
+      h('span.node-icon', done ? icon('starCream') : half ? icon('target') : locked ? icon('lock') : unitIcon(unit.icon)),
     );
-    const wrap = h('div.node-wrap', current ? h('div.start-bubble', { style: `transform:translateX(${OFFSETS[i % OFFSETS.length]}px)` }, 'START') : null, node, h('div.node-label', { style: `transform:translateX(${OFFSETS[i % OFFSETS.length]}px)` }, ref.lesson.title));
+    const bubble = current && step && 'needs' in step && step.needs === 'practice' ? 'PRACTICE' : 'START';
+    const wrap = h('div.node-wrap', current ? h('div.start-bubble', { style: `transform:translateX(${OFFSETS[i % OFFSETS.length]}px)` }, bubble) : null, node, h('div.node-label', { style: `transform:translateX(${OFFSETS[i % OFFSETS.length]}px)` }, ref.lesson.title));
     node.addEventListener('click', () => lessonSheet(ref));
     path.append(wrap);
   });
@@ -159,13 +222,13 @@ function unitBlock(unitIndex: number): HTMLElement {
 
 export function renderLearn(host: HTMLElement): void {
   host.append(topBar('Chess Mentor'), coachCard());
-  let section = '';
-  UNITS.forEach((unit, i) => {
-    if (unit.section !== section) {
-      section = unit.section;
-      host.append(h('h4.section-title', section));
-    }
-    host.append(unitBlock(i));
+  LEVELS.forEach((lvl, li) => {
+    host.append(levelHeader(li));
+    UNITS.forEach((unit, i) => {
+      if (lvl.units.includes(unit.id)) host.append(unitBlock(i));
+    });
+    const test = levelTestCard(li);
+    if (test) host.append(test);
   });
-  host.append(h('p.footnote', 'Lessons unlock in order. Reviews keep everything fresh.'));
+  host.append(h('p.footnote', 'Lessons unlock in order, after you pass each practice set. Reviews keep everything fresh.'));
 }

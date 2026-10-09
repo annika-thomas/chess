@@ -2,7 +2,9 @@ import type { Item } from '../engine/coach';
 import { formatMoves, parseLine, sameSan, sideToMove, squaresFor } from '../engine/notation';
 import type { Grade } from '../engine/srs';
 import { addXp, completeLesson, currentStreak, gradeCard, recordTags, save, state, xpToday } from '../engine/store';
-import type { ChoiceExercise, Exercise, FindExercise, InfoExercise, RecallExercise, SquareExercise, WalkExercise } from '../types';
+import type { ChoiceExercise, EndgameExercise, Exercise, FindExercise, InfoExercise, RecallExercise, SquareExercise, WalkExercise } from '../types';
+import { engine } from '../engine/bot';
+import { Chess } from 'chess.js';
 import { Board, pawnSkeleton } from './board';
 import { clear, figHtml, h, inline, md, shuffle } from './dom';
 import { sound } from './sound';
@@ -530,6 +532,133 @@ const mountSquare =
     };
   };
 
+/** Count pieces of one kind and color in a position. */
+const countPieces = (fen: string, piece: string) => [...fen.split(' ')[0]].filter((c) => c === piece).length;
+
+const mountEndgame =
+  (ex: EndgameExercise): Mount =>
+  (host, ctx) => {
+    const fen = ex.fens[Math.floor(Math.random() * ex.fens.length)];
+    const me = ex.side;
+    const them = me === 'w' ? 'b' : 'w';
+    const myQueen = me === 'w' ? 'Q' : 'q';
+    const theirQueen = me === 'w' ? 'q' : 'Q';
+    const theirPawn = me === 'w' ? 'p' : 'P';
+    let myMoves = 0;
+    let over = false;
+    let timer: number | undefined;
+    const status = h('div.sq-counter');
+    const board = new Board({
+      orientation: me,
+      onMove: () => {
+        if (over || board.chess.turn() === me) return false;
+        myMoves++;
+        updateStatus();
+        timer = window.setTimeout(afterMine, 120);
+        return true;
+      },
+    });
+    board.load([], fen);
+    host.append(prompt(ex.prompt, `${me === 'w' ? 'White' : 'Black'} to play · ${goalText()}`), h('div.sq-head', h('div'), status), board.el);
+    ctx.button('Your move', () => undefined, false);
+
+    function goalText(): string {
+      return ex.goal === 'mate'
+        ? `checkmate within ${ex.limit} moves`
+        : ex.goal === 'promote'
+          ? `promote and keep your new queen (${ex.limit} moves)`
+          : `stop the pawn for ${ex.limit} moves`;
+    }
+    function updateStatus(): void {
+      status.textContent = `Move ${myMoves} / ${ex.limit}`;
+    }
+
+    function end(success: boolean, why: string): void {
+      if (over) return;
+      over = true;
+      board.setInteractive(false);
+      ctx.done({ correct: success, grade: success ? 3 : 1, title: success ? 'Done!' : 'Not this time', detail: `${why}\n\n${ex.explain}` });
+    }
+
+    /** Check goals after any move; returns true if the drill ended. */
+    function judge(): boolean {
+      const c = board.chess;
+      const f = c.fen();
+      if (c.isCheckmate()) {
+        end(c.turn() === them, c.turn() === them ? `Checkmate in ${myMoves} moves.` : 'You were checkmated.');
+        return true;
+      }
+      if (c.isStalemate()) {
+        end(ex.goal === 'hold', ex.goal === 'hold' ? 'Stalemate: a draw, so you held.' : 'Stalemate! The game is a draw: always leave the king a square.');
+        return true;
+      }
+      if (ex.goal === 'hold') {
+        if (countPieces(f, theirQueen) > 0) {
+          end(false, 'The pawn promoted.');
+          return true;
+        }
+        if (countPieces(f, theirPawn) === 0) {
+          end(true, 'You won the pawn: a draw.');
+          return true;
+        }
+      }
+      if (ex.goal === 'mate' && countPieces(f, myQueen) === 0 && countPieces(f, me === 'w' ? 'R' : 'r') === 0) {
+        end(false, `Your ${countPieces(fen, myQueen) ? 'queen' : 'rook'} was captured: with a bare king it’s a draw. Keep it protected or a safe distance away.`);
+        return true;
+      }
+      if (c.isDraw()) {
+        end(ex.goal === 'hold', ex.goal === 'hold' ? 'A draw: you held.' : 'The position is a draw now.');
+        return true;
+      }
+      return false;
+    }
+
+    function afterMine(): void {
+      if (judge()) return;
+      if (ex.goal === 'promote' && countPieces(board.chess.fen(), myQueen) > 0) {
+        // Promoted: success if the queen survives the reply.
+        void reply().then(() => {
+          if (over) return;
+          if (countPieces(board.chess.fen(), myQueen) > 0) end(true, `Promoted in ${myMoves} moves and kept the queen.`);
+          else end(false, 'Your new queen was captured.');
+        });
+        return;
+      }
+      if (myMoves >= ex.limit) {
+        if (ex.goal === 'hold') end(true, `You held for ${ex.limit} moves.`);
+        else end(false, `Move limit reached (${ex.limit}).`);
+        return;
+      }
+      void reply().then(() => {
+        if (!judge()) board.setInteractive(true);
+      });
+    }
+
+    async function reply(): Promise<void> {
+      board.setInteractive(false);
+      status.textContent = 'Engine thinking…';
+      try {
+        const [best] = await engine.analyse(board.chess.fen(), { depth: 12, multipv: 1 });
+        if (over || !best) return;
+        const mv = new Chess(board.chess.fen()).move({ from: best.move.slice(0, 2), to: best.move.slice(2, 4), promotion: best.move[4] ?? 'q' });
+        board.play(mv.san);
+      } catch {
+        end(false, 'The engine couldn’t start. Try reopening the app.');
+        return;
+      }
+      updateStatus();
+    }
+
+    updateStatus();
+    if (board.chess.turn() === me) board.setInteractive(true);
+    else void reply().then(() => !judge() && board.setInteractive(true));
+    return () => {
+      over = true;
+      clearTimeout(timer);
+      board.destroy();
+    };
+  };
+
 export function mountExercise(ex: Exercise): Mount {
   switch (ex.type) {
     case 'info':
@@ -544,6 +673,8 @@ export function mountExercise(ex: Exercise): Mount {
       return mountChoice(ex);
     case 'square':
       return mountSquare(ex);
+    case 'endgame':
+      return mountEndgame(ex);
   }
 }
 

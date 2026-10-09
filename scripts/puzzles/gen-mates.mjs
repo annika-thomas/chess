@@ -1,7 +1,7 @@
 // Prototype: generate Polgar-style "mate in 1" positions, each with exactly one mating move.
 import { Chess } from 'chess.js';
 
-let seed = Number(process.argv[2] ?? 1);
+let seed = 1;
 const rand = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
 const pick = (a) => a[Math.floor(rand() * a.length)];
 const sq = (f, r) => 'abcdefgh'[f] + (r + 1);
@@ -47,12 +47,26 @@ function mateInOne(fen) {
   return mates.length === 1 ? mates[0] : null;
 }
 
-const found = [];
-const t0 = Date.now();
-for (let i = 0; i < 200000 && found.length < 40; i++) {
-  const fen = randomPosition();
-  const m = mateInOne(fen);
-  if (m) found.push({ fen, solution: m });
+/** Generate `n` mate-in-1 puzzles (deterministic for a seed), in the app's puzzle format. */
+export function generate(n, startSeed = 1) {
+  seed = startSeed;
+  const found = [];
+  const seen = new Set();
+  for (let i = 0; i < 400000 && found.length < n; i++) {
+    const fen = randomPosition();
+    const m = mateInOne(fen);
+    if (!m || seen.has(fen)) continue;
+    seen.add(fen);
+    const c = new Chess(fen);
+    const mv = c.move(m);
+    found.push({ id: `gen${found.length + 1}`, fen, moves: [mv.from + mv.to + (mv.promotion ?? '')], rating: 600, themes: ['mateIn1'] });
+  }
+  return found;
 }
-console.log(`found ${found.length} in ${Date.now() - t0}ms`);
-for (const f of found.slice(0, 8)) console.log(f.solution.padEnd(8), f.fen);
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const t0 = Date.now();
+  const found = generate(Number(process.argv[3] ?? 10), Number(process.argv[2] ?? 1));
+  console.log(`found ${found.length} in ${Date.now() - t0}ms`);
+  for (const f of found.slice(0, 8)) console.log(f.moves[0].padEnd(8), f.fen);
+}

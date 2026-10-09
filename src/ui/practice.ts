@@ -15,6 +15,9 @@ import { state } from '../engine/store';
 import { go, startSession } from './app';
 import { h } from './dom';
 import { icon, unitIcon } from './icons';
+import { loadSets, PASS, type PuzzleSet } from '../engine/puzzles';
+import { runPuzzleSet } from './puzzleRun';
+import { setUnlocked } from '../engine/levels';
 import type { Side } from '../types';
 import { topBar } from './learn';
 
@@ -22,6 +25,42 @@ function card(title: string, body: string, cta: string, onClick: () => void, opt
   const btn = h('button.btn.primary', { type: 'button', disabled: opts.disabled }, cta);
   btn.addEventListener('click', onClick);
   return h('section.pcard', { style: opts.accent ? `--accent:${opts.accent}` : undefined }, h('div', h('h3', title), h('p', body)), btn);
+}
+
+/** One row per puzzle set: best score, mastery, and Woodpecker-style fluent runs. */
+function setRow(set: PuzzleSet): HTMLElement {
+  const rec = state.sets[set.id];
+  const open = setUnlocked(set.id);
+  const status = !open
+    ? 'Locked: reach this in the course first'
+    : !rec
+      ? `${set.puzzles.length} puzzles · not started`
+      : rec.mastered
+        ? `Mastered · best ${Math.round(rec.bestAccuracy * 100)}%${rec.bestSeconds ? ` at ${rec.bestSeconds.toFixed(0)}s` : ''}${rec.fluentRuns ? ` · fluent ×${rec.fluentRuns}` : ''}`
+        : `Best ${Math.round(rec.bestAccuracy * 100)}% · need ${Math.round(PASS * 100)}%`;
+  const row = h(
+    `button.row.line-row${open ? '' : '.locked-row'}`,
+    { type: 'button', disabled: !open },
+    h('span.result-dot.master', icon(!open ? 'lock' : rec?.mastered ? 'star' : 'target')),
+    h('div.row-main', h('b', set.title), h('small.muted', set.about), h('small.muted', status)),
+    h('span.chev', '›'),
+  );
+  row.addEventListener('click', () => runPuzzleSet({ set, mode: rec?.mastered ? 'cycle' : 'practice', hint: set.id.includes('test') || set.id.startsWith('mix') ? undefined : set.title }));
+  return row;
+}
+
+function puzzleSets(): HTMLElement {
+  const box = h('section', h('h4.section-title', 'Puzzle sets'), h('p.muted.pad', 'Loading puzzles…'));
+  loadSets()
+    .then((sets) => {
+      box.querySelector('p')?.remove();
+      box.append(h('p.muted.pad', 'Drill each theme until you pass (80%), then rerun it faster. Strong players repeat the same sets until the patterns are instant.'));
+      for (const set of sets.values()) if (set.id !== 'daily') box.append(setRow(set));
+    })
+    .catch(() => {
+      box.querySelector('p')!.textContent = 'Couldn’t load the puzzle sets. Try reopening the app.';
+    });
+  return box;
 }
 
 /** 30-second "tap the square" race, from either side, with best scores. */
@@ -68,7 +107,7 @@ export function renderPractice(host: HTMLElement): void {
     ),
   );
 
-  host.append(coordinateSprint());
+  host.append(coordinateSprint(), puzzleSets());
 
   const sprint = buildPatternSprint();
   host.append(

@@ -27,7 +27,7 @@ export default defineConfig({
       },
       workbox: {
         // The chess engine (~1.8 MB of WASM) is precached too, so games work offline.
-        globPatterns: ['**/*.{js,css,html,svg,png,jpg,wasm}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,jpg,wasm,json}'],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
       },
     }),

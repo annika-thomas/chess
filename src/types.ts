@@ -112,7 +112,22 @@ export interface SquareExercise extends BaseExercise {
   pieces?: boolean;
 }
 
-export type Exercise = InfoExercise | WalkExercise | RecallExercise | FindExercise | ChoiceExercise | SquareExercise;
+/**
+ * Play a basic endgame against the engine. `mate`: checkmate within `limit` of your moves (stalemate fails).
+ * `promote`: promote your pawn and keep the new queen. `hold`: stop the opponent's pawn for `limit` moves.
+ */
+export interface EndgameExercise extends BaseExercise {
+  type: 'endgame';
+  prompt: string;
+  /** Start positions; one is picked at random each time. */
+  fens: string[];
+  side: Side;
+  goal: 'mate' | 'promote' | 'hold';
+  limit: number;
+  explain: string;
+}
+
+export type Exercise = InfoExercise | WalkExercise | RecallExercise | FindExercise | ChoiceExercise | SquareExercise | EndgameExercise;
 
 export interface Lesson {
   id: string;
@@ -122,6 +137,8 @@ export interface Lesson {
   /** Default tags for exercises that don't set their own. */
   tags?: string[];
   exercises: Exercise[];
+  /** Puzzle set to pass (80%) before the next lesson opens. */
+  practice?: string;
 }
 
 export interface Unit {

@@ -5,7 +5,9 @@ import { registerSW } from 'virtual:pwa-register';
 import { state } from './engine/store';
 import { setFigurineSource } from './ui/dom';
 import { termByKey } from './data/glossary';
-import { initApp, sheet } from './ui/app';
+import { initApp, render, sheet } from './ui/app';
+import { loadSets } from './engine/puzzles';
+import { setAvailableSets } from './engine/levels';
 import { h } from './ui/dom';
 import { renderLearn } from './ui/learn';
 import { renderOnboarding } from './ui/onboarding';
@@ -38,6 +40,14 @@ document.addEventListener('keydown', (e) => {
 });
 clearTimeout((window as Window & { __bootTimer?: number }).__bootTimer);
 root.textContent = '';
+
+// Load the puzzle library; mastery gates switch on once the sets are known.
+loadSets()
+  .then((sets) => {
+    setAvailableSets(sets.keys());
+    if (state.profile.onboarded) render();
+  })
+  .catch(() => undefined);
 
 function start(): void {
   initApp(root, { learn: renderLearn, practice: renderPractice, play: renderPlay, repertoire: renderRepertoire, profile: renderProfile });

@@ -25,6 +25,8 @@
     "lucide": "^0.468.0"
   },
   "devDependencies": {
+    "@types/node": "^22.15.21",
+    "fzstd": "^0.1.1",
     "typescript": "^5.8.3",
     "vite": "^6.3.5",
     "vite-plugin-pwa": "^1.0.0",

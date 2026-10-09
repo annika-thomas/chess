@@ -1,6 +1,8 @@
 import { CARDS, LESSONS, cardRef, lessonRef, type CardRef, type LessonRef } from '../data';
 import type { Exercise } from '../types';
 import { isDue, retrievability } from './srs';
+import { currentStep, lessonUnlocked } from './levels';
+import { LEVELS } from '../data';
 import { currentStreak, state, xpToday } from './store';
 
 /** One item in a runnable session. */
@@ -47,22 +49,14 @@ export const tagLabel = (t: string) => TAG_LABELS[t] ?? t;
 
 export const isLessonDone = (id: string) => !!state.lessons[id];
 
+/** The next lesson to learn (first not-done lesson you're allowed to open). */
 export function nextLesson(): LessonRef | undefined {
-  return LESSONS.find((l) => !isLessonDone(l.lesson.id));
+  return LESSONS.find((l) => !isLessonDone(l.lesson.id) && lessonUnlocked(l));
 }
 
 /** A lesson is open if it's done, or it's the next one, or the learner skipped ahead to it. */
-/**
- * A lesson is open if it's done, or it's no further than one step past your furthest completed lesson,
- * or it's the first one you haven't done. Units added earlier in the course never re-lock lessons
- * you had already reached.
- */
-export function isUnlocked(ref: LessonRef): boolean {
-  if (isLessonDone(ref.lesson.id)) return true;
-  const furthest = LESSONS.reduce((max, l) => (isLessonDone(l.lesson.id) ? Math.max(max, l.order) : max), -1);
-  const next = nextLesson();
-  return !next || ref.order <= next.order || ref.order <= furthest + 1;
-}
+/** Lessons open strictly in order, gated by practice sets and level tests (see levels.ts). */
+export const isUnlocked = (ref: LessonRef) => lessonUnlocked(ref);
 
 const learned = (c: CardRef) => !!state.cards[c.id];
 
@@ -229,6 +223,7 @@ export function gameBasedPriority(): { lesson: LessonRef; opening: string; games
 
 export type Action =
   | { kind: 'lesson'; ref: LessonRef }
+  | { kind: 'set'; setId: string }
   | { kind: 'review'; count: number }
   | { kind: 'weak'; spot: WeakSpot }
   | { kind: 'done' };
@@ -280,6 +275,24 @@ export function advise(now = Date.now()): Advice {
       body: 'Keep these patterns sharp.',
       action: { kind: 'review', count: due },
       cta: 'Review',
+    };
+  }
+  const step = currentStep();
+  if (step && 'test' in step) {
+    const lvl = LEVELS[step.test];
+    return {
+      headline: `${lvl.title.split(' · ')[0]} test`,
+      body: `You’ve finished every lesson in ${lvl.title}. Pass the mixed test (80%, no hints) to unlock the next level.`,
+      action: { kind: 'set', setId: lvl.test! },
+      cta: 'Take the test',
+    };
+  }
+  if (step && step.needs === 'practice') {
+    return {
+      headline: `Homework: “${step.ref.lesson.title}” practice set`,
+      body: 'Pass it at 80% to unlock the next lesson. A coach wouldn’t move you on until the pattern sticks, and neither will I.',
+      action: { kind: 'set', setId: step.ref.lesson.practice! },
+      cta: 'Start the set',
     };
   }
   if (next) {

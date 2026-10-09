@@ -1801,3 +1801,81 @@ cg-board square.mentor-target {
   font-size: 17px;
   color: var(--text2);
 }
+
+/* ───── Levels, practice gates ───── */
+.level-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 28px 16px 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.level-header h4 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 20px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text);
+}
+.level-header.locked h4 {
+  color: var(--muted);
+}
+.level-header .icon {
+  width: 22px;
+  height: 22px;
+}
+.level-test {
+  margin: 8px 16px 20px;
+  padding: 18px 16px;
+  border-radius: var(--radius);
+  background: var(--card);
+  border: 1px solid var(--line);
+  text-align: center;
+}
+.level-test h3 {
+  font-family: var(--serif);
+  font-size: 22px;
+}
+.level-test .btn {
+  width: 100%;
+}
+.node.half {
+  background: radial-gradient(circle at 35% 28%, rgba(255, 255, 255, 0.25), transparent 55%), #8a8a80;
+  box-shadow: 0 7px 0 #55554e;
+}
+.lesson-sheet .stack {
+  margin-top: 12px;
+}
+.locked-row {
+  opacity: 0.55;
+}
+.puzzle-turn {
+  margin: 8px 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.turn-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #888;
+}
+.turn-dot.white {
+  background: #fff;
+}
+.turn-dot.black {
+  background: #111;
+}
+.puzzle-progress {
+  margin: 0 16px;
+  flex: none;
+  height: 8px;
+}
+.puzzle-feedback {
+  margin: 10px 16px 0;
+  min-height: 44px;
+}

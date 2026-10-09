@@ -113,6 +113,10 @@ export class Board {
     this.sync();
   }
 
+  setOrientation(side: Side): void {
+    this.cg.set({ orientation: color(side) });
+  }
+
   setInteractive(on: boolean): void {
     this.interactive = on;
     this.sync();
