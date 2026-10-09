@@ -429,8 +429,10 @@ p {
   position: relative;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
+/* Press effect uses `translate`, which adds to the node's inline sideways offset. (Overriding
+ * `transform` here moved the button out from under the finger, so taps on offset nodes never landed.) */
 .node:active {
-  transform: translateY(5px) !important;
+  translate: 0 5px;
 }
 .node.done {
   background: var(--gold);
