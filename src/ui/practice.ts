@@ -14,12 +14,38 @@ import {
 import { state } from '../engine/store';
 import { go, startSession } from './app';
 import { h } from './dom';
+import type { Side } from '../types';
 import { topBar } from './learn';
 
 function card(title: string, body: string, cta: string, onClick: () => void, opts: { accent?: string; disabled?: boolean } = {}): HTMLElement {
   const btn = h('button.btn.primary', { type: 'button', disabled: opts.disabled }, cta);
   btn.addEventListener('click', onClick);
   return h('section.pcard', { style: opts.accent ? `--accent:${opts.accent}` : undefined }, h('div', h('h3', title), h('p', body)), btn);
+}
+
+/** 30-second "tap the square" race, from either side, with best scores. */
+function coordinateSprint(): HTMLElement {
+  const go = (side: Side) =>
+    startSession(
+      'Coordinate Sprint',
+      [{ exercise: { type: 'square', mode: 'tap', seconds: 30, side }, tags: ['coordinates'] }],
+      'practice',
+    );
+  const white = h('button.btn.primary', { type: 'button' }, 'As White');
+  const black = h('button.btn.ghost', { type: 'button' }, 'As Black');
+  white.addEventListener('click', () => go('w'));
+  black.addEventListener('click', () => go('b'));
+  const best = state.sprintBest;
+  return h(
+    'section.pcard',
+    { style: '--accent:#7a6a4f' },
+    h(
+      'div',
+      h('h3', 'Coordinate Sprint'),
+      h('p', `Tap as many squares as you can in 30 seconds. Best: ${best.w} as White · ${best.b} as Black. Once you can do 20+, reading moves stops feeling like decoding.`),
+    ),
+    h('div.inline', white, black),
+  );
 }
 
 export function renderPractice(host: HTMLElement): void {
@@ -40,6 +66,8 @@ export function renderPractice(host: HTMLElement): void {
       { accent: '#6f8f4e', disabled: !learnedAny },
     ),
   );
+
+  host.append(coordinateSprint());
 
   const sprint = buildPatternSprint();
   host.append(

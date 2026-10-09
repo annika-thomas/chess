@@ -7,7 +7,7 @@ import { addXp, save, state, type PlayedGame } from '../engine/store';
 import type { Side } from '../types';
 import { push, render, sheet } from './app';
 import { Board } from './board';
-import { clear, h, md } from './dom';
+import { clear, figHtml, h, md } from './dom';
 import { topBar } from './learn';
 import { movesViewer } from './repertoire';
 import { sound } from './sound';
@@ -233,7 +233,7 @@ function startGame(side: Side, level: Level, repertoire: boolean): void {
     const h2 = board.chess.history();
     const parts: string[] = [];
     h2.forEach((m, i) => parts.push(i % 2 === 0 ? `${i / 2 + 1}.${m}` : m));
-    movesEl.textContent = parts.slice(-14).join(' ');
+    movesEl.innerHTML = figHtml(parts.slice(-14).join(' '));
     movesEl.dataset.plies = String(h2.length);
   };
 

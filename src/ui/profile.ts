@@ -109,7 +109,7 @@ function settingsSection(): HTMLElement {
     state.profile.goal = Number(goal.value);
     save();
   });
-  const toggle = (label: string, key: 'sound' | 'showCoords') => {
+  const toggle = (label: string, key: 'sound' | 'showCoords' | 'labelSquares' | 'figurines') => {
     const cb = h('input', { type: 'checkbox', checked: state.settings[key] });
     cb.addEventListener('change', () => {
       state.settings[key] = cb.checked;
@@ -157,6 +157,8 @@ function settingsSection(): HTMLElement {
     h('label.field', h('span', 'Daily goal'), goal),
     toggle('Sound effects', 'sound'),
     toggle('Board coordinates', 'showCoords'),
+    toggle('Label every square (training wheels)', 'labelSquares'),
+    toggle('Piece icons in notation (♞f3 instead of Nf3)', 'figurines'),
     h('div.inline', exp, imp, file),
     reset,
   );

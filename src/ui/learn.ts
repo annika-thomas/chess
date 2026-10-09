@@ -1,4 +1,4 @@
-import { UNITS, LESSONS, type LessonRef } from '../data';
+import { UNITS, LESSONS, isCard, type LessonRef } from '../data';
 import { advise, buildReview, buildUnitReview, buildWeakSpotDrill, isLessonDone, isUnlocked, nextLesson, unitStrength } from '../engine/coach';
 import { currentStreak, state, xpToday } from '../engine/store';
 import type { Lesson } from '../types';
@@ -9,7 +9,7 @@ export function lessonItems(lesson: Lesson) {
   return lesson.exercises.map((exercise, i) => ({
     exercise,
     tags: exercise.tags ?? lesson.tags ?? [],
-    cardId: exercise.type === 'recall' || exercise.type === 'find' || exercise.type === 'choice' ? `${lesson.id}#${i}` : undefined,
+    cardId: isCard(exercise) ? `${lesson.id}#${i}` : undefined,
   }));
 }
 

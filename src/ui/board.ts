@@ -14,6 +14,8 @@ export interface BoardOpts {
   /** Called when the learner makes a legal move. Return false to reject (board snaps back). */
   onMove?: (san: string, move: Move) => boolean | void;
   viewOnly?: boolean;
+  /** Called when any square is tapped (used by coordinate drills). */
+  onSelect?: (square: string) => void;
 }
 
 const color = (s: Side) => (s === 'w' ? 'white' : 'black');
@@ -60,6 +62,7 @@ export class Board {
       fen: this.chess.fen(),
       orientation: color(opts.orientation),
       coordinates: state.settings.showCoords,
+      coordinatesOnSquares: state.settings.labelSquares,
       viewOnly: opts.viewOnly,
       animation: { enabled: true, duration: 220 },
       highlight: { lastMove: true, check: true },
@@ -67,6 +70,7 @@ export class Board {
       draggable: { showGhost: true },
       premovable: { enabled: false },
       drawable: { enabled: false, visible: true },
+      events: opts.onSelect ? { select: (key) => opts.onSelect!(key) } : {},
     });
     // chessground measures its container; re-measure once attached.
     requestAnimationFrame(() => this.cg.redrawAll());
@@ -141,6 +145,14 @@ export class Board {
 
   highlight(squares: string[] = [], cls = 'mentor-hl'): void {
     this.cg.set({ highlight: { custom: new Map(squares.map((s) => [s as Key, cls])) } });
+  }
+
+  /** Mark squares green and/or red at the same time. */
+  mark(good: string[], bad: string[] = []): void {
+    const custom = new Map<Key, string>();
+    for (const s of good) custom.set(s as Key, 'mentor-good');
+    for (const s of bad) custom.set(s as Key, 'mentor-bad');
+    this.cg.set({ highlight: { custom } });
   }
 
   flashSquare(square: string, cls: 'good' | 'bad'): void {

@@ -3,7 +3,7 @@ import { formatMoves, parseLine } from '../engine/notation';
 import type { RepertoireLine } from '../types';
 import { back, push, startSession } from './app';
 import { Board } from './board';
-import { clear, h, md } from './dom';
+import { clear, figHtml, h, md } from './dom';
 import { topBar } from './learn';
 
 const GROUPS: Array<[string, (l: RepertoireLine) => boolean]> = [
@@ -19,7 +19,7 @@ export function renderRepertoire(host: HTMLElement): void {
     host.append(h('h4.section-title', title));
     for (const line of REPERTOIRE.filter(pred)) {
       const { moves } = parseLine(line.line);
-      const row = h('button.row.line-row', { type: 'button' }, h('div.row-main', h('b', line.name), h('small.muted.mono', formatMoves(moves.slice(0, 8)) + (moves.length > 8 ? ' …' : ''))), h('span.chev', '›'));
+      const row = h('button.row.line-row', { type: 'button' }, h('div.row-main', h('b', line.name), h('small.muted.mono', { html: figHtml(formatMoves(moves.slice(0, 8)) + (moves.length > 8 ? ' …' : '')) })), h('span.chev', '›'));
       row.addEventListener('click', () => push((el) => lineViewer(el, line)));
       host.append(row);
     }
@@ -68,13 +68,13 @@ export function movesViewer(host: HTMLElement, o: ViewerOpts): void {
   const update = () => {
     board.load(moves.slice(0, ply));
     clear(note);
-    if (ply > 0) note.append(h('b.mv', formatMoves([...Array(ply - 1).fill(''), moves[ply - 1]], ply - 1)), ' ', md(notes[ply - 1] || '—'));
+    if (ply > 0) note.append(h('b.mv', { html: figHtml(formatMoves([...Array(ply - 1).fill(''), moves[ply - 1]], ply - 1)) }), ' ', md(notes[ply - 1] || '—'));
     else note.append(h('span.muted', 'Starting position'));
     list.querySelectorAll('.mvb').forEach((b, k) => b.classList.toggle('on', k === ply - 1));
   };
   moves.forEach((m, k) => {
     if (k % 2 === 0) list.append(h('span.num', `${k / 2 + 1}.`));
-    const b = h(`button.mvb${notes[k] ? '.has-note' : ''}`, { type: 'button' }, m);
+    const b = h(`button.mvb${notes[k] ? '.has-note' : ''}`, { type: 'button', html: figHtml(m) });
     b.addEventListener('click', () => {
       ply = k + 1;
       update();

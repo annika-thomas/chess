@@ -89,7 +89,30 @@ export interface ChoiceExercise extends BaseExercise {
   highlights?: string[];
 }
 
-export type Exercise = InfoExercise | WalkExercise | RecallExercise | FindExercise | ChoiceExercise;
+/**
+ * Coordinate fluency: `tap` shows a square name and you tap it; `name` lights up a square and you pick its name.
+ * Squares are random each time unless `squares` is given.
+ */
+export interface SquareExercise extends BaseExercise {
+  type: 'square';
+  mode: 'tap' | 'name';
+  prompt?: string;
+  /** Board orientation (which side is at the bottom). */
+  side?: Side;
+  /** Fixed squares to ask, in order. */
+  squares?: string[];
+  /** How many random squares to ask (default 8). */
+  count?: number;
+  /** Limit random squares to these files/ranks, e.g. "abcd" / "1234" for an easier start. */
+  files?: string;
+  ranks?: string;
+  /** Timed sprint: ask squares until this many seconds pass. */
+  seconds?: number;
+  /** Show the start position instead of an empty board. */
+  pieces?: boolean;
+}
+
+export type Exercise = InfoExercise | WalkExercise | RecallExercise | FindExercise | ChoiceExercise | SquareExercise;
 
 export interface Lesson {
   id: string;

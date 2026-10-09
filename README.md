@@ -13,7 +13,9 @@ On iPhone: open it in Safari → Share → **Add to Home Screen**. It runs full 
 | Black vs 1.e4 | **1...e5**, 3...Bc5 against the Italian, the Closed Ruy Lopez, the Scotch, and answers to the gambits | The Italian in the mirror: you reuse what you learned as White |
 | Black vs 1.d4 | **Queen's Gambit Declined**, with the same setup against the London, Colle, English and Réti | One structure against everything |
 
-Plus Foundations (opening principles, Scholar's Mate, f7, the blunder check) and a **Pattern Gym**: flashed pawn skeletons, "which opening is this?", opening tactics, and "the usual move is wrong here" drills.
+It starts with **Board Basics**: coordinate fluency (tap-the-square and name-the-square drills from both sides) and reading notation (piece letters, `x`, `+`, `#`, `O-O`, move numbers). Practice has a 30-second **Coordinate Sprint**. Moves are shown with piece icons (♞f3) by default, and there's an optional "label every square" setting.
+
+Then Foundations (opening principles, Scholar's Mate, f7, the blunder check) and a **Pattern Gym**: flashed pawn skeletons, "which opening is this?", opening tactics, and "the usual move is wrong here" drills.
 
 ## How it teaches (and why)
 

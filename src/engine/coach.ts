@@ -14,6 +14,8 @@ export interface Item {
 }
 
 export const TAG_LABELS: Record<string, string> = {
+  coordinates: 'Finding squares',
+  notation: 'Reading notation',
   center: 'Controlling the center',
   development: 'Developing pieces',
   'king-safety': 'King safety',
@@ -279,7 +281,7 @@ export function advise(now = Date.now()): Advice {
     return {
       headline: first ? `Welcome, ${name}!` : goalHit ? 'Goal done. Keep going?' : streak ? `Day ${streak}. Keep it going` : `Hi ${name}`,
       body: first
-        ? "We'll start with the three jobs every opening does. Each lesson is about 3 minutes."
+        ? `We'll start with "${next.lesson.title}": ${next.lesson.goal.toLowerCase()}. Each lesson is about 3 minutes.`
         : `Next: ${next.unit.title}: "${next.lesson.title}". ${next.lesson.goal}.`,
       action: { kind: 'lesson', ref: next },
       cta: first ? 'Start' : 'Continue',

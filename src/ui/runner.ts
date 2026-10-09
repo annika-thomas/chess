@@ -2,9 +2,9 @@ import type { Item } from '../engine/coach';
 import { formatMoves, parseLine, sameSan, sideToMove, squaresFor } from '../engine/notation';
 import type { Grade } from '../engine/srs';
 import { addXp, completeLesson, currentStreak, gradeCard, recordTags, save, state, xpToday } from '../engine/store';
-import type { ChoiceExercise, Exercise, FindExercise, InfoExercise, RecallExercise, WalkExercise } from '../types';
+import type { ChoiceExercise, Exercise, FindExercise, InfoExercise, RecallExercise, SquareExercise, WalkExercise } from '../types';
 import { Board, pawnSkeleton } from './board';
-import { clear, h, md, shuffle } from './dom';
+import { clear, figHtml, h, inline, md, shuffle } from './dom';
 import { sound } from './sound';
 
 export interface Result {
@@ -45,7 +45,7 @@ const fenPly = (fen: string) => {
 // ───────────────────────── Exercise views ─────────────────────────
 
 function prompt(text: string, sub?: string): HTMLElement {
-  return h('div.prompt', h('h2', text), sub ? h('p.sub', sub) : null);
+  return h('div.prompt', h('h2', { html: inline(text) }), sub ? h('p.sub', { html: inline(sub) }) : null);
 }
 
 function noteBubble(): { el: HTMLElement; show(ply: number, san: string, note: string): void; reset(text?: string): void } {
@@ -53,7 +53,7 @@ function noteBubble(): { el: HTMLElement; show(ply: number, san: string, note: s
   return {
     el,
     show(ply, san, note) {
-      const row = h('div.note', h('b.mv', moveLabel(ply, san)), note ? ' ' : null, note ? md(note) : null);
+      const row = h('div.note', h('b.mv', { html: figHtml(moveLabel(ply, san)) }), note ? ' ' : null, note ? md(note) : null);
       el.prepend(row);
       while (el.children.length > 2) el.lastElementChild!.remove();
       el.classList.add('pop');
@@ -283,7 +283,7 @@ const mountChoice =
     let picked = -1;
 
     options.forEach((o, idx) => {
-      const btn = h('button.option', { type: 'button' }, o.text);
+      const btn = h('button.option', { type: 'button', html: inline(o.text) });
       btn.addEventListener('click', () => {
         picked = idx;
         opts.querySelectorAll('.option').forEach((b, k) => b.classList.toggle('selected', k === idx));
@@ -351,6 +351,184 @@ const mountChoice =
     };
   };
 
+const ALL_FILES = 'abcdefgh';
+const ALL_RANKS = '12345678';
+
+function randomSquares(ex: SquareExercise, n: number): string[] {
+  const files = ex.files ?? ALL_FILES;
+  const ranks = ex.ranks ?? ALL_RANKS;
+  const out: string[] = [];
+  while (out.length < n) {
+    const sq = files[Math.floor(Math.random() * files.length)] + ranks[Math.floor(Math.random() * ranks.length)];
+    // No immediate repeats, and avoid the same square twice in a short drill.
+    if (sq !== out[out.length - 1] && (n > 30 || !out.includes(sq))) out.push(sq);
+  }
+  return out;
+}
+
+/** Three plausible wrong names: same file, same rank, and the square mirrored (the classic "board flipped" slip). */
+function squareDistractors(sq: string): string[] {
+  const f = sq[0];
+  const r = sq[1];
+  const others = new Set<string>();
+  const mirror = ALL_FILES[7 - ALL_FILES.indexOf(f)] + ALL_RANKS[7 - ALL_RANKS.indexOf(r)];
+  if (mirror !== sq) others.add(mirror);
+  while (others.size < 3) {
+    const c =
+      others.size % 2
+        ? f + ALL_RANKS[Math.floor(Math.random() * 8)]
+        : ALL_FILES[Math.floor(Math.random() * 8)] + r;
+    if (c !== sq) others.add(c);
+  }
+  return [...others].slice(0, 3);
+}
+
+const EMPTY = '8/8/8/8/8/8/8/8 w - - 0 1';
+
+const mountSquare =
+  (ex: SquareExercise): Mount =>
+  (host, ctx) => {
+    const side = ex.side ?? 'w';
+    const timed = !!ex.seconds;
+    const queue = ex.squares ?? randomSquares(ex, timed ? 400 : ex.count ?? 8);
+    let i = 0;
+    let right = 0;
+    let wrong = 0;
+    let locked = false;
+    let timer: number | undefined;
+    let ticker: number | undefined;
+    const started = Date.now();
+    const missed: string[] = [];
+
+    const target = h('div.sq-target');
+    const counter = h('div.sq-counter');
+    const opts = h('div.options.sq-options');
+    const board = new Board({
+      orientation: side,
+      onSelect: ex.mode === 'tap' ? (sq) => answer(sq) : undefined,
+    });
+    if (!ex.pieces) board.showFen(EMPTY);
+
+    const title =
+      ex.prompt ??
+      (ex.mode === 'tap'
+        ? timed
+          ? `Tap each square as fast as you can: ${ex.seconds} seconds!`
+          : 'Tap the square'
+        : 'Name the highlighted square');
+    host.append(
+      prompt(title, side === 'b' ? 'You’re viewing from Black’s side: a1 is now top-right.' : 'You’re viewing from White’s side: a1 is bottom-left.'),
+      h('div.sq-head', target, counter),
+      board.el,
+      opts,
+    );
+
+    const updateCounter = () => {
+      if (timed) {
+        const left = Math.max(0, ex.seconds! - Math.floor((Date.now() - started) / 1000));
+        counter.textContent = `⏱ ${left}s · ✓ ${right}`;
+      } else counter.textContent = `${Math.min(i + 1, queue.length)} / ${queue.length}`;
+    };
+
+    const show = () => {
+      locked = false;
+      const sq = queue[i];
+      updateCounter();
+      board.highlight([]);
+      clear(opts);
+      if (ex.mode === 'tap') {
+        target.textContent = sq;
+      } else {
+        target.textContent = '?';
+        board.highlight([sq], 'mentor-target');
+        for (const name of shuffle([sq, ...squareDistractors(sq)])) {
+          const b = h('button.option.sq-opt', { type: 'button' }, name);
+          b.addEventListener('click', () => answer(name, b));
+          opts.append(b);
+        }
+      }
+    };
+
+    function answer(given: string, btn?: HTMLElement): void {
+      if (locked || i >= queue.length) return;
+      const sq = queue[i];
+      const ok = given === sq;
+      if (ok) {
+        right++;
+        sound.move();
+      } else {
+        wrong++;
+        missed.push(sq);
+        sound.wrong();
+      }
+      // Show where it really was (green) and where you tapped (red).
+      if (ex.mode === 'tap') {
+        board.mark([sq], ok ? [] : [given]);
+        if (!ok) target.textContent = `${sq} is here`;
+      } else {
+        btn?.classList.add(ok ? 'right' : 'wrong');
+        if (!ok) opts.querySelectorAll('.option').forEach((b) => b.textContent === sq && b.classList.add('right'));
+      }
+      locked = true;
+      i++;
+      const pause = ok ? (timed ? 120 : 350) : 900;
+      timer = window.setTimeout(() => (i >= queue.length ? finish() : show()), pause);
+    }
+
+    let finished = false;
+    function finish(): void {
+      // The sprint timer and the last answer can both end the drill; only finish once.
+      if (finished) return;
+      finished = true;
+      clearInterval(ticker);
+      clearTimeout(timer);
+      board.highlight([]);
+      locked = true;
+      const secs = (Date.now() - started) / 1000;
+      const total = right + wrong;
+      const avg = total ? (secs / total).toFixed(1) : '–';
+      if (timed) {
+        const best = state.sprintBest[side];
+        const isBest = right > best;
+        if (isBest) {
+          state.sprintBest[side] = right;
+          save();
+        }
+        ctx.done({
+          correct: wrong <= Math.max(1, Math.round(total * 0.1)),
+          grade: 3,
+          title: isBest ? `New best: ${right} squares!` : `${right} squares`,
+          detail: `${wrong ? `${wrong} miss${wrong > 1 ? 'es' : ''} (${missed.slice(0, 6).join(', ')}). ` : 'No misses! '}About ${avg}s per square.${isBest ? '' : ` Your best as ${side === 'w' ? 'White' : 'Black'}: ${best}.`}`,
+        });
+        return;
+      }
+      const accuracy = right / queue.length;
+      ctx.done({
+        correct: accuracy >= 0.85,
+        grade: accuracy === 1 ? 3 : accuracy >= 0.85 ? 2 : 1,
+        title: accuracy === 1 ? `All ${queue.length} right!` : `${right} / ${queue.length}`,
+        detail: `${missed.length ? `Missed: **${missed.join(', ')}**. ` : ''}About ${avg}s per square: speed comes with repetition.`,
+      });
+    }
+
+    ctx.button(ex.mode === 'tap' ? 'Tap the board' : 'Pick a name', () => undefined, false);
+    show();
+    if (timed) {
+      ticker = window.setInterval(() => {
+        updateCounter();
+        if (Date.now() - started >= ex.seconds! * 1000) {
+          i = queue.length;
+          finish();
+        }
+      }, 250);
+    }
+    return () => {
+      clearTimeout(timer);
+      clearInterval(ticker);
+      board.destroy();
+    };
+  };
+
 export function mountExercise(ex: Exercise): Mount {
   switch (ex.type) {
     case 'info':
@@ -363,6 +541,8 @@ export function mountExercise(ex: Exercise): Mount {
       return mountFind(ex);
     case 'choice':
       return mountChoice(ex);
+    case 'square':
+      return mountSquare(ex);
   }
 }
 

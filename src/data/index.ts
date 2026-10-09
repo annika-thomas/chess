@@ -1,4 +1,5 @@
 import type { Exercise, Lesson, RepertoireLine, Unit } from '../types';
+import { basics } from './basics';
 import { blackItalian, carlsbad, otherE4, qgd, ruyScotch, vsSystems } from './black';
 import { principles, survive } from './foundations';
 import * as L from './lines';
@@ -6,6 +7,7 @@ import { patternGym } from './patterns';
 import { beyond, italian, punish } from './white';
 
 export const UNITS: Unit[] = [
+  basics,
   principles,
   survive,
   italian,
@@ -36,7 +38,7 @@ export const lessonRef = (id: string) => byId.get(id);
 
 /** Exercises that become spaced-repetition cards (everything you actively recall). */
 export function isCard(ex: Exercise): boolean {
-  return ex.type === 'recall' || ex.type === 'find' || ex.type === 'choice';
+  return ex.type !== 'info' && ex.type !== 'walk';
 }
 
 export const cardId = (lessonId: string, index: number) => `${lessonId}#${index}`;

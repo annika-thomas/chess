@@ -3,6 +3,7 @@ import '@lichess-org/chessground/assets/chessground.cburnett.css';
 import './styles.css';
 import { registerSW } from 'virtual:pwa-register';
 import { state } from './engine/store';
+import { setFigurineSource } from './ui/dom';
 import { initApp } from './ui/app';
 import { renderLearn } from './ui/learn';
 import { renderOnboarding } from './ui/onboarding';
@@ -12,6 +13,7 @@ import { renderProfile } from './ui/profile';
 import { renderRepertoire } from './ui/repertoire';
 
 registerSW({ immediate: true });
+setFigurineSource(() => state.settings.figurines);
 
 const root = document.getElementById('app')!;
 clearTimeout((window as Window & { __bootTimer?: number }).__bootTimer);

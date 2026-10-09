@@ -1534,3 +1534,52 @@ cg-board square.mentor-bad {
   gap: 10px;
   margin-top: 14px;
 }
+
+/* ───── Coordinate drills ───── */
+.sq-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 0 16px 8px;
+}
+.sq-target {
+  font-family: var(--serif);
+  font-size: 44px;
+  font-weight: 700;
+  color: var(--gold);
+  min-height: 52px;
+}
+.sq-counter {
+  color: var(--muted);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.sq-options {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr;
+}
+.sq-opt {
+  text-align: center;
+  font-size: 22px !important;
+  font-family: var(--serif);
+}
+cg-board square.mentor-target {
+  background: rgba(230, 180, 34, 0.75);
+  box-shadow: inset 0 0 0 3px #fff3;
+}
+/* "Label every square" training wheels. */
+.cg-wrap coords.squares coord {
+  font-size: clamp(8px, 2.4vw, 12px);
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 0 2px #000, 0 0 2px #000;
+  padding: 0 0.25em 0.2em 0;
+  text-transform: lowercase;
+}
+/* Piece icons in notation: chess glyphs render small in most fonts, so scale them to match letters. */
+.fig {
+  font-family: 'Apple Symbols', 'Segoe UI Symbol', 'DejaVu Sans', system-ui, sans-serif;
+  font-size: 1.3em;
+  line-height: 0;
+  vertical-align: -0.08em;
+  margin-right: 0.04em;
+}

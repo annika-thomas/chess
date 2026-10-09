@@ -41,6 +41,13 @@ function check(ex: Exercise): void {
       expect(ex.solution.length % 2).toBe(1);
       break;
     }
+    case 'square': {
+      for (const sq of ex.squares ?? []) expect(sq).toMatch(/^[a-h][1-8]$/);
+      for (const f of ex.files ?? '') expect('abcdefgh').toContain(f);
+      for (const r of ex.ranks ?? '') expect('12345678').toContain(r);
+      expect(ex.squares?.length ?? ex.count ?? ex.seconds ?? 8).toBeGreaterThan(0);
+      break;
+    }
     case 'choice': {
       if (ex.setup || ex.fen) setupBoard(ex);
       expect(ex.options.filter((o) => o.correct).length).toBe(1);

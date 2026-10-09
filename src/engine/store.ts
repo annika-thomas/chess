@@ -101,7 +101,9 @@ export interface State {
   rating: Rating;
   /** Last-used Play settings. */
   play: { level: number; side: Side | 'random'; repertoire: boolean };
-  settings: { sound: boolean; haptics: boolean; showCoords: boolean };
+  settings: { sound: boolean; haptics: boolean; showCoords: boolean; labelSquares: boolean; figurines: boolean };
+  /** Best Coordinate Sprint scores by orientation. */
+  sprintBest: { w: number; b: number };
 }
 
 const KEY = 'chess-mentor.v1';
@@ -132,7 +134,8 @@ function fresh(): State {
     games: [],
     rating: { ...START },
     play: { level: 3, side: 'w', repertoire: true },
-    settings: { sound: true, haptics: true, showCoords: true },
+    settings: { sound: true, haptics: true, showCoords: true, labelSquares: false, figurines: true },
+    sprintBest: { w: 0, b: 0 },
   };
 }
 
