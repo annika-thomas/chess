@@ -1,9 +1,28 @@
 # Chess Mentor ♞
 
-A Duolingo-style chess opening coach for your phone. Short lessons teach a complete, beginner-friendly repertoire. Spaced repetition then drills the moves *and the reasons* until you recognize the patterns on sight.
+A chess coach for your phone, Duolingo-style but structured the way strong players train: fundamentals first (tactics, checkmates, basic endgames), with homework, puzzle sets you must pass before moving on, and a beginner-friendly opening repertoire once the basics are solid. Spaced repetition drills the moves *and the reasons* until you recognize the patterns on sight.
 
 **Live app:** https://annika-thomas.github.io/chess/
 On iPhone: open it in Safari → Share → **Add to Home Screen**. It runs full screen and works offline.
+
+## Levels and homework
+
+The course is split into levels, like the Steps Method used in Dutch chess schools:
+
+| Level | Contents | Gate |
+|---|---|---|
+| 1 · Foundations | Board basics, piece safety, checkmate patterns (mate in one, back rank, queen mate), opening principles, double attacks | 80% on the Level 1 test |
+| 2 · Tactics & Endgames | Pins, skewers, discovered and double check, removing the defender, mate in two, f7 attacks, rook mate, the square, opposition | 80% on the Level 2 test |
+| 3 · Your Repertoire | The openings below | |
+
+- **Mastery gates**: lessons open strictly in order. Most come with a 25-puzzle **practice set**, and you need 80% to move on (mastery learning). Missed puzzles can be retried straight away.
+- **Fluency**: once you've passed a set, reruns are timed. The target is 85% at 15 s or less per puzzle (the Woodpecker Method idea: the same puzzles, faster, until they're automatic).
+- **Endgame drills** against Stockfish: mate with the queen or rook within a move limit, promote a pawn, or hold a draw.
+- **Today's homework** (~30 min): a plan fixed each morning with reviews, the current lesson or set, a speed run of a mastered set, an endgame drill, and mixed or daily puzzles.
+- **Weekly slow game + self-annotation** (Botvinnik school): play a game with no clock, then mark the moments you think mattered and what you were thinking, *before* the engine looks. The engine then flags your real mistakes, shows which ones you spotted, and asks why each happened. Your answers set the next homework and feed your weak spots.
+- **Blunder guard** (optional): warns when your move drops material, without saying why, so you do the safety check yourself.
+
+Puzzles come from the [Lichess puzzle database](https://database.lichess.org/#puzzles) (CC0) via `scripts/puzzles/build-sets.mjs`.
 
 ## What it teaches
 
@@ -59,8 +78,9 @@ npm run build    # production build in dist/
 ```
 
 - `src/data/lines.ts`: annotated repertoire lines in PGN-like notation: `1.e4 {why} e5 2.Nf3 {why} …`
-- `src/data/*.ts`: units and lessons (exercise types: `info`, `walk`, `recall`, `find`, `choice`)
-- `src/engine/`: FSRS scheduler, store, coach/personalization, game importer
+- `src/data/*.ts`: units and lessons (exercise types: `info`, `walk`, `recall`, `find`, `choice`, `square`, `endgame`)
+- `scripts/puzzles/`: builds `public/puzzles/sets.json` from the Lichess puzzle file (`--lichess <file.csv.zst>`)
+- `src/engine/`: FSRS scheduler, store, coach/personalization, levels and gates, homework plan, game importer
 - `src/ui/`: screens; the board is [chessground](https://github.com/lichess-org/chessground) and the rules are [chess.js](https://github.com/jhlywa/chess.js)
 
 Pushing to `main` runs the tests and deploys to GitHub Pages.

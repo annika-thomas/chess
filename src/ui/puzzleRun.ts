@@ -1,7 +1,7 @@
 import { Chess } from 'chess.js';
 import type { Key } from '@lichess-org/chessground/types';
 import { accuracy, avgSeconds, FLUENT, isFluent, PASS, type Puzzle, type PuzzleSet, type SetRun } from '../engine/puzzles';
-import { addXp, save, state } from '../engine/store';
+import { addXp, markHomework, save, state } from '../engine/store';
 import type { Side } from '../types';
 import { render, sheet } from './app';
 import { Board } from './board';
@@ -14,8 +14,10 @@ export type SetMode = 'practice' | 'test' | 'cycle' | 'retry';
 export interface SetOpts {
   set: PuzzleSet;
   mode: SetMode;
-  /** Use only these puzzles (e.g. the ones missed last time). */
+  /** Use only these puzzles (e.g. the ones missed last time, or today's daily batch). */
   only?: Puzzle[];
+  /** What "Run again" runs after a retry (the batch the retry came from). */
+  full?: Puzzle[];
   /** Show the theme name as a hint (off for tests and mixed sets). */
   hint?: string;
   onFinish?: (run: SetRun, passed: boolean) => void;
@@ -198,6 +200,7 @@ export function runPuzzleSet(o: SetOpts): void {
       }
       if (fluent) rec.fluentRuns++;
       state.sets[o.set.id] = rec;
+      markHomework(`set:${o.set.id}`);
       if (passed && !wasMastered) note = 'Set mastered: the next step is unlocked.';
       else if (fluent) note = `Fluent run #${rec.fluentRuns}: 85%+ at ${FLUENT.seconds}s or less per puzzle. That’s the Woodpecker target.`;
     }
@@ -243,11 +246,11 @@ export function runPuzzleSet(o: SetOpts): void {
     retry.addEventListener('click', () => {
       const m = missed.slice();
       leave();
-      runPuzzleSet({ ...o, mode: 'retry', only: m });
+      runPuzzleSet({ ...o, mode: 'retry', only: m, full: o.mode === 'retry' ? o.full : o.only });
     });
     again.addEventListener('click', () => {
       leave();
-      runPuzzleSet({ ...o, mode: o.mode === 'retry' ? 'practice' : o.mode, only: undefined });
+      runPuzzleSet({ ...o, mode: o.mode === 'retry' ? 'practice' : o.mode, only: o.mode === 'retry' ? o.full : o.only, full: undefined });
     });
     done.addEventListener('click', () => {
       leave();

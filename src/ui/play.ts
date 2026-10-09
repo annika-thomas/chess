@@ -1,5 +1,7 @@
 import { Chess } from 'chess.js';
-import { botMove, engine, evaluate, LEVELS, levelById, type Level } from '../engine/bot';
+import { botMove, engine, evaluate, isMistake, judgeMove, lossLabel, LEVELS, levelById, type Level } from '../engine/bot';
+import { annotatable, weekStart } from '../engine/homework';
+import { annotateGame, uciToSan } from './annotate';
 import type { Boss } from '../data/bosses';
 import { parseLine } from '../engine/notation';
 import { buildBook, gradeGame, makeDrill, type Game } from '../engine/importer';
@@ -106,6 +108,11 @@ function setupPanel(): HTMLElement {
     cfg.repertoire = rep.checked;
     save();
   });
+  const guardBox = h('input', { type: 'checkbox', checked: cfg.guard });
+  guardBox.addEventListener('change', () => {
+    cfg.guard = guardBox.checked;
+    save();
+  });
   const start = h('button.btn.primary.wide', { type: 'button' }, 'Play');
   start.addEventListener('click', () => {
     const side: Side = cfg.side === 'random' ? (Math.random() < 0.5 ? 'w' : 'b') : cfg.side;
@@ -117,6 +124,7 @@ function setupPanel(): HTMLElement {
     h('div.seg-row', ...sideBtns),
     h('div.level-row', minus, h('div.level-label', lvlName, lvlElo), plus),
     h('label.toggle', h('span', h('b', 'Opening practice'), h('br'), h('small.muted', 'The computer plays into your repertoire, and I tell you when you leave it.')), rep),
+    h('label.toggle', h('span', h('b', 'Blunder guard'), h('br'), h('small.muted', 'I warn you when a move drops material, without saying why. Taking it back makes the game unrated.')), guardBox),
     start,
   );
 }
@@ -142,7 +150,7 @@ function recentGames(): HTMLElement | null {
           h(
             'div.row-main',
             h('b', `${g.side === 'w' ? '♔' : '♚'} vs ${lvl.name} (~${lvl.elo})`),
-            h('small.muted', `${resultLabel(g)} by ${g.reason} · ${Math.ceil(g.moves.length / 2)} moves${g.opening ? ' · ' + g.opening : ''}`),
+            h('small.muted', `${resultLabel(g)} by ${g.reason} · ${Math.ceil(g.moves.length / 2)} moves${g.opening ? ' · ' + g.opening : ''}${g.annotation ? ' · annotated' : ''}`),
           ),
           g.rated && g.delta !== undefined ? h(`span.delta${g.delta >= 0 ? '.up' : '.down'}`, `${g.delta >= 0 ? '+' : ''}${g.delta}`) : h('span.delta', '—'),
         );
@@ -158,14 +166,20 @@ export function renderPlay(host: HTMLElement): void {
   engine.warmUp();
 }
 
-function reviewGame(g: PlayedGame): void {
+export function reviewGame(g: PlayedGame): void {
   const book = buildBook(g.side);
   const chess = new Chess();
-  const notes = g.moves.map((san) => {
+  const notes = g.moves.map((san, ply) => {
     const entry = book.get(fenKey(chess.fen()));
+    const fen = chess.fen();
     chess.move(san);
     const info = entry ? [...entry.moves.entries()].find(([m]) => sameSan(m, san))?.[1] : undefined;
-    return info ? `**Book move.** ${info.note}` : '';
+    const parts = info ? [`**Book move.** ${info.note}`] : [];
+    const mark = g.annotation?.marks.find((m) => m.ply === ply);
+    if (mark) parts.push(`**Your note:** ${mark.note || '(marked as critical)'}`);
+    const flag = g.annotation?.flagged.find((f) => f.ply === ply);
+    if (flag) parts.push(`**Engine:** this lost ${lossLabel(flag.loss)}. Better was **${uciToSan(fen, flag.best)}**.`);
+    return parts.join('\n\n');
   });
   push((el) =>
     movesViewer(el, {
@@ -185,10 +199,16 @@ export function startBoss(boss: Boss): void {
   startGame(boss.side, recommendedLevel(), false, boss);
 }
 
+/** Weekly homework: a slow game at your level, alternating colours week to week. */
+export function startSlowGame(): void {
+  const side: Side = Math.round(weekStart() / 604_800_000) % 2 ? 'b' : 'w';
+  startGame(side, recommendedLevel(), true, undefined, true);
+}
+
 /** A boss game counts as passed unless you lost it. */
 const bossPassed = (result: PlayedGame['result']) => result !== 'loss';
 
-function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss): void {
+function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss, slow = false): void {
   const root = document.getElementById('app')!;
   clear(root);
   document.body.classList.add('locked');
@@ -247,6 +267,10 @@ function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss): 
     say(
       `**Boss battle.** ${boss.brief}\n\nWin, or still be standing after **${boss.moves} of your moves** (no worse than −1.5 by the engine’s count), to earn the crown.`,
     );
+  } else if (slow) {
+    say(
+      `**Slow game (this week’s homework).** No clock, so take your time. Before every move, the safety check: what are the **checks, captures and threats**, for both sides? Afterwards you’ll annotate it.`,
+    );
   } else say(
     repertoire
       ? `Opening practice: the computer will play into your **${side === 'w' ? 'White' : 'Black'}** repertoire. Play your moves, and I’ll say when either of you leaves it.`
@@ -292,7 +316,47 @@ function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss): 
         return;
       }
     }
-    setTimeout(botTurn, 250);
+    if (state.play.guard && !boss) void guard(prev.fen(), san);
+    else setTimeout(botTurn, 250);
+  }
+
+  /** Blunder guard: if your move drops material, say so (not why) and offer to take it back. */
+  async function guard(fen: string, san: string): Promise<void> {
+    thinking = true;
+    board.setInteractive(false);
+    status.textContent = 'checking…';
+    let bad = false;
+    let loss = 0;
+    try {
+      const j = await judgeMove(fen, san, 8);
+      bad = isMistake(j, 200);
+      loss = j.loss;
+    } catch {
+      /* no engine: just play on */
+    }
+    status.textContent = '';
+    thinking = false;
+    if (over) return;
+    if (!bad) return void setTimeout(botTurn, 150);
+    sound.wrong();
+    const back = h('button.btn.primary.small-btn', { type: 'button' }, icon('undo'), ' Take it back');
+    const on = h('button.btn.ghost.small-btn', { type: 'button' }, 'Play on');
+    say(
+      `**Blunder guard:** ${san} loses ${lossLabel(loss)}. What can your opponent capture, check or threaten now? (Taking it back makes this game unrated.)`,
+      'warn',
+    );
+    coach.append(h('div.guard-btns', back, on));
+    back.addEventListener('click', () => {
+      board.undo();
+      rated = false;
+      showMoves();
+      say('Taken back. Do the safety check, then find a better move.', 'info');
+      board.setInteractive(true);
+    });
+    on.addEventListener('click', () => {
+      say('Playing on. Watch what happens next: it’s a good moment to annotate later.', 'info');
+      setTimeout(botTurn, 150);
+    });
   }
 
   /** After your last boss move: let the engine decide whether you're still standing. */
@@ -436,6 +500,8 @@ function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss): 
     const sub = `${reason[0].toUpperCase()}${reason.slice(1)} · ${played} moves`;
     const rematch = h('button.btn.primary.wide', { type: 'button' }, boss ? 'Try again' : 'Rematch');
     const review = h('button.btn.ghost.wide', { type: 'button' }, 'Review game');
+    const canAnnotate = !boss && annotatable(game);
+    const annotate = h(`button.btn.${slow ? 'primary' : 'ghost'}.wide`, { type: 'button' }, 'Annotate this game');
     const done = h('button.btn.ghost.wide', { type: 'button' }, 'Done');
     const closeSheet = sheet(
       h(
@@ -449,7 +515,8 @@ function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss): 
         boss && !bossPassed(result) ? md('Review the game to see where it turned, then try again. Every attempt earns XP.') : null,
         lastBookLine ? h('p', `Opening: ${lastBookLine}`) : null,
         drillNote ? md(drillNote) : null,
-        h('div.stack', rematch, review, done),
+        slow && !canAnnotate ? md('Short games aren’t worth annotating: this week’s homework needs at least 15 moves each. Play another when you can.') : null,
+        h('div.stack', canAnnotate && slow ? annotate : null, rematch, canAnnotate && !slow ? annotate : null, review, done),
       ),
     );
     const leave = () => {
@@ -459,12 +526,17 @@ function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss): 
     };
     rematch.addEventListener('click', () => {
       leave();
-      startGame(side, level, repertoire, boss);
+      startGame(side, level, repertoire, boss, slow);
     });
     review.addEventListener('click', () => {
       leave();
       render();
       reviewGame(game);
+    });
+    annotate.addEventListener('click', () => {
+      leave();
+      render();
+      annotateGame(game);
     });
     done.addEventListener('click', () => {
       leave();

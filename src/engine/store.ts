@@ -83,6 +83,27 @@ export interface PlayedGame {
   delta?: number;
   /** Repertoire line the opening followed, if any. */
   opening?: string;
+  /** Your own notes on the game, then the engine's check of them (weekly homework). */
+  annotation?: Annotation;
+}
+
+/** A self-annotated game: your critical moments first, then what the engine found. */
+export interface Annotation {
+  /** Plies you marked as critical, with what you were thinking. */
+  marks: Array<{ ply: number; note: string }>;
+  /** Your moves the engine flagged (loss in centipawns, with its better move). */
+  flagged: Array<{ ply: number; loss: number; best: string }>;
+  /** Why the biggest mistakes happened, in your words (cause ids). */
+  causes: string[];
+  at: number;
+}
+
+/** Today's homework: what was assigned, and what's been done. */
+export interface Homework {
+  day: string;
+  /** Task keys assigned for the day, fixed when the plan is first built so it doesn't shift. */
+  plan: string[];
+  done: string[];
 }
 
 export interface SetRecord {
@@ -113,7 +134,7 @@ export interface State {
   games: PlayedGame[];
   rating: Rating;
   /** Last-used Play settings. */
-  play: { level: number; side: Side | 'random'; repertoire: boolean };
+  play: { level: number; side: Side | 'random'; repertoire: boolean; guard: boolean };
   settings: { sound: boolean; haptics: boolean; showCoords: boolean; labelSquares: boolean; figurines: boolean };
   /** Best Coordinate Sprint scores by orientation. */
   sprintBest: { w: number; b: number };
@@ -123,6 +144,7 @@ export interface State {
   sets: Record<string, SetRecord>;
   /** Boss battles by unit id. */
   bosses: Record<string, { beaten: boolean; attempts: number; beatenAt?: number }>;
+  homework: Homework;
 }
 
 const KEY = 'chess-mentor.v1';
@@ -152,12 +174,13 @@ function fresh(): State {
     platformRatings: [],
     games: [],
     rating: { ...START },
-    play: { level: 3, side: 'w', repertoire: true },
+    play: { level: 3, side: 'w', repertoire: true, guard: true },
     settings: { sound: true, haptics: true, showCoords: true, labelSquares: false, figurines: true },
     sprintBest: { w: 0, b: 0 },
     masters: {},
     sets: {},
     bosses: {},
+    homework: { day: '', plan: [], done: [] },
   };
 }
 
@@ -241,6 +264,13 @@ export function completeLesson(id: string, mistakes: number, now = Date.now()): 
     mistakes: prev ? Math.min(prev.mistakes, mistakes) : mistakes,
     runs: (prev?.runs ?? 0) + 1,
   };
+}
+
+/** Record that a piece of homework was done today (e.g. "review", "set:mate1", "lesson:mate-one"). */
+export function markHomework(key: string, now = Date.now()): void {
+  const day = today(now);
+  if (state.homework.day !== day) state.homework = { day, plan: [], done: [] };
+  if (!state.homework.done.includes(key)) state.homework.done.push(key);
 }
 
 export function exportBackup(): string {

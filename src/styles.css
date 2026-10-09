@@ -1879,3 +1879,237 @@ cg-board square.mentor-target {
   margin: 10px 16px 0;
   min-height: 44px;
 }
+
+/* ── Homework ── */
+.homework {
+  margin: 0 16px 20px;
+  padding: 14px 12px 12px;
+  border-radius: var(--radius);
+  background: var(--card);
+  border: 1px solid var(--line);
+}
+.hw-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 4px;
+}
+.hw-head h3 {
+  font-family: var(--serif);
+  font-size: 21px;
+  margin: 0 0 2px;
+}
+.hw-ring svg {
+  width: 34px;
+  height: 34px;
+}
+.hw-progress {
+  margin: 10px 4px 10px;
+}
+.hw-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.hw-row:active {
+  background: var(--bg2);
+}
+.hw-row + .hw-row {
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+}
+.hw-check {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  color: var(--muted);
+  font-weight: 800;
+  font-size: 14px;
+}
+.hw-check svg {
+  width: 18px;
+  height: 18px;
+}
+.hw-row.done .hw-check {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
+.hw-row.done b {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.hw-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.hw-main small {
+  line-height: 1.3;
+}
+.hw-min {
+  flex: none;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+.hw-sub {
+  margin: 12px 8px 2px;
+  color: var(--gold);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.hw-row.weekly {
+  border-top: none;
+}
+
+/* ── Annotation: a scrolling page, full-size board ── */
+.session.game.annotate {
+  display: block;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+.annotate .board-wrap {
+  max-width: none;
+}
+.annotate .controls {
+  margin: 10px 0 0;
+}
+.annot-intro {
+  padding: 4px 16px 10px;
+  color: var(--text2);
+  font-size: 15px;
+  line-height: 1.45;
+}
+.annot-panel {
+  padding: 10px 16px;
+  min-height: 64px;
+  line-height: 1.45;
+}
+.annot-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.annot-row .btn {
+  margin-left: auto;
+}
+.annot-note {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--card2);
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+  resize: vertical;
+}
+.mvb.theirs {
+  background: transparent;
+  color: var(--muted);
+}
+.mvb.marked {
+  box-shadow: inset 0 -3px 0 var(--gold);
+}
+.mvb.flagged {
+  color: #fff;
+  background: var(--red-dark);
+}
+.mvb.flagged.on,
+.mvb.on {
+  outline: 2px solid #fff;
+}
+.annot-footer {
+  padding: 8px 16px calc(24px + var(--safe-b));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.cause {
+  padding: 12px;
+  border-radius: var(--radius);
+  background: var(--card);
+  border: 1px solid var(--line);
+}
+.cause-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.link-btn {
+  border: none;
+  background: none;
+  color: var(--green);
+  font: inherit;
+  font-weight: 800;
+  padding: 0;
+  cursor: pointer;
+}
+.badge {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 99px;
+}
+.badge.good {
+  background: var(--green-bg);
+  color: var(--green);
+}
+.badge.bad {
+  background: var(--red-bg);
+  color: var(--red);
+}
+.chip-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chip-btn {
+  border: 1px solid var(--line);
+  background: var(--bg2);
+  color: var(--text2);
+  border-radius: 99px;
+  padding: 7px 11px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.chip-btn.on {
+  background: var(--green-dark);
+  border-color: var(--green);
+  color: #fff;
+}
+.guard-btns {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.result-sheet .hw-list {
+  text-align: left;
+}

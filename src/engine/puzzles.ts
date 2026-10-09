@@ -27,6 +27,10 @@ interface SetsFile {
 }
 
 let loading: Promise<Map<string, PuzzleSet>> | null = null;
+const titles = new Map<string, string>();
+
+/** A set's title once the file has loaded (falls back to its id). */
+export const setTitle = (id: string) => titles.get(id) ?? id;
 
 /** Load all sets once (precached by the service worker, so it works offline). */
 export function loadSets(): Promise<Map<string, PuzzleSet>> {
@@ -35,7 +39,10 @@ export function loadSets(): Promise<Map<string, PuzzleSet>> {
       if (!r.ok) throw new Error(`puzzle sets: ${r.status}`);
       return r.json() as Promise<SetsFile>;
     })
-    .then((f) => new Map(f.sets.map((s) => [s.id, s])))
+    .then((f) => {
+      for (const s of f.sets) titles.set(s.id, s.title);
+      return new Map(f.sets.map((s) => [s.id, s]));
+    })
     .catch((e) => {
       loading = null;
       throw e;

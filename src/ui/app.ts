@@ -87,7 +87,7 @@ function renderAll(): void {
 }
 
 /** Start a lesson or practice session full-screen; return to the current tab afterwards. */
-export function startSession(title: string, items: Item[], mode: 'lesson' | 'practice', lessonId?: string): void {
+export function startSession(title: string, items: Item[], mode: 'lesson' | 'practice', lessonId?: string, homework?: string): void {
   if (!items.length) {
     alert('Nothing to practice yet. Finish a lesson first!');
     return;
@@ -102,6 +102,7 @@ export function startSession(title: string, items: Item[], mode: 'lesson' | 'pra
     items,
     mode,
     lessonId,
+    homework,
     onExit: () => {
       exitFullscreen();
       render();

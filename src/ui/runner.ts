@@ -1,7 +1,7 @@
 import type { Item } from '../engine/coach';
 import { formatMoves, parseLine, sameSan, sideToMove, squaresFor } from '../engine/notation';
 import type { Grade } from '../engine/srs';
-import { addXp, completeLesson, currentStreak, gradeCard, recordTags, save, state, xpToday } from '../engine/store';
+import { addXp, completeLesson, currentStreak, gradeCard, markHomework, recordTags, save, state, xpToday } from '../engine/store';
 import type { ChoiceExercise, EndgameExercise, Exercise, FindExercise, InfoExercise, RecallExercise, SquareExercise, WalkExercise } from '../types';
 import { engine } from '../engine/bot';
 import { Chess } from 'chess.js';
@@ -34,6 +34,8 @@ export interface RunOptions {
   items: Item[];
   mode: 'lesson' | 'practice';
   lessonId?: string;
+  /** Homework key to mark done when the session finishes. */
+  homework?: string;
   onExit: () => void;
 }
 
@@ -790,7 +792,11 @@ export function runSession(root: HTMLElement, opts: RunOptions): void {
     const before = currentStreak(now);
     const xp = opts.mode === 'lesson' ? 10 + (mistakes === 0 ? 5 : 0) : 5 + correct;
     addXp(xp, now);
-    if (opts.lessonId) completeLesson(opts.lessonId, mistakes, now);
+    if (opts.lessonId) {
+      completeLesson(opts.lessonId, mistakes, now);
+      markHomework(`lesson:${opts.lessonId}`, now);
+    }
+    if (opts.homework) markHomework(opts.homework, now);
     save();
     sound.finish();
     showSummary(root, {

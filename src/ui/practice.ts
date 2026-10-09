@@ -63,14 +63,18 @@ function puzzleSets(): HTMLElement {
   return box;
 }
 
+export const startSprint = (side: Side) =>
+  startSession(
+    'Coordinate Sprint',
+    [{ exercise: { type: 'square', mode: 'tap', seconds: 30, side }, tags: ['coordinates'] }],
+    'practice',
+    undefined,
+    'sprint',
+  );
+
 /** 30-second "tap the square" race, from either side, with best scores. */
 function coordinateSprint(): HTMLElement {
-  const go = (side: Side) =>
-    startSession(
-      'Coordinate Sprint',
-      [{ exercise: { type: 'square', mode: 'tap', seconds: 30, side }, tags: ['coordinates'] }],
-      'practice',
-    );
+  const go = startSprint;
   const white = h('button.btn.primary', { type: 'button' }, 'As White');
   const black = h('button.btn.ghost', { type: 'button' }, 'As Black');
   white.addEventListener('click', () => go('w'));
@@ -102,7 +106,7 @@ export function renderPractice(host: HTMLElement): void {
           ? 'Nothing is due. You can still sharpen your shakiest moves.'
           : 'Finish your first lesson and reviews will appear here.',
       due ? `Review ${due}` : 'Practice anyway',
-      () => startSession('Daily review', buildReview(), 'practice'),
+      () => startSession('Daily review', buildReview(), 'practice', undefined, 'review'),
       { accent: '#6f8f4e', disabled: !learnedAny },
     ),
   );

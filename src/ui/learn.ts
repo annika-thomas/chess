@@ -10,6 +10,7 @@ import { sheet, startSession } from './app';
 import { recommendedLevel, startBoss } from './play';
 import { h, md } from './dom';
 import { icon, unitIcon } from './icons';
+import { homeworkCard } from './homework';
 
 export function lessonItems(lesson: Lesson) {
   return lesson.exercises.map((exercise, i) => ({
@@ -50,7 +51,7 @@ function coachCard(): HTMLElement {
   btn.addEventListener('click', () => {
     const act = a.action;
     if (act.kind === 'lesson') startLesson(act.ref);
-    else if (act.kind === 'review') startSession('Daily review', buildReview(), 'practice');
+    else if (act.kind === 'review') startSession('Daily review', buildReview(), 'practice', undefined, 'review');
     else if (act.kind === 'weak') startSession(act.spot.label, buildWeakSpotDrill(act.spot.tag), 'practice');
     else if (act.kind === 'set') openSet(act.setId);
   });
@@ -221,7 +222,7 @@ function unitBlock(unitIndex: number): HTMLElement {
 }
 
 export function renderLearn(host: HTMLElement): void {
-  host.append(topBar('Chess Mentor'), coachCard());
+  host.append(topBar('Chess Mentor'), coachCard(), homeworkCard());
   LEVELS.forEach((lvl, li) => {
     host.append(levelHeader(li));
     UNITS.forEach((unit, i) => {

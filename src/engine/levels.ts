@@ -9,10 +9,15 @@ import { state } from './store';
 
 /** Sets present in the loaded puzzle file. Until it loads (or if a set is missing), its gate is skipped. */
 let available = new Set<string>();
+let loaded = false;
 export function setAvailableSets(ids: Iterable<string>): void {
   available = new Set(ids);
+  loaded = true;
 }
+/** Whether the puzzle file has loaded (plans that depend on it shouldn't be fixed before then). */
+export const setsLoaded = () => loaded;
 const gated = (setId: string | undefined) => !!setId && available.has(setId);
+export const setAvailable = (setId: string) => available.has(setId);
 
 export const practiceMastered = (setId: string | undefined) => !gated(setId) || !!state.sets[setId!]?.mastered;
 

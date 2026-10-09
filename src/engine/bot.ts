@@ -146,14 +146,48 @@ const clampScore = (s: number) => Math.max(-2000, Math.min(2000, s));
  * Used to give credit for strong alternatives in Guess the Move.
  */
 export async function moveLoss(fen: string, san: string, depth = 10): Promise<number> {
+  return (await judgeMove(fen, san, depth)).loss;
+}
+
+export interface MoveJudgement {
+  /** Centipawns lost compared with the best move (0 = as good as best). */
+  loss: number;
+  /** Engine's best move in UCI. */
+  best: string;
+  /** Evaluation before the move and after it, both from the mover's point of view. */
+  before: number;
+  after: number;
+}
+
+export async function judgeMove(fen: string, san: string, depth = 10): Promise<MoveJudgement> {
   const [best] = await engine.analyse(fen, { depth, multipv: 1 });
+  const before = clampScore(best?.score ?? 0);
   const after = new Chess(fen);
   after.move(san);
-  if (after.isCheckmate()) return 0;
-  if (after.isDraw()) return Math.max(0, clampScore(best?.score ?? 0));
+  if (after.isCheckmate()) return { loss: 0, best: best?.move ?? '', before, after: 2000 };
+  if (after.isDraw()) return { loss: Math.max(0, before), best: best?.move ?? '', before, after: 0 };
   const [reply] = await engine.analyse(after.fen(), { depth: depth - 1, multipv: 1 });
-  const mine = -(reply?.score ?? 0);
-  return Math.max(0, clampScore(best?.score ?? 0) - clampScore(mine));
+  const mine = clampScore(-(reply?.score ?? 0));
+  return { loss: Math.max(0, before - mine), best: best?.move ?? '', before, after: mine };
+}
+
+/**
+ * Rough size of a loss in plain words. Stockfish's scores are scaled to winning chances, not material
+ * (a hung bishop reads about +7), so we don't call them "pawns".
+ */
+export function lossLabel(cp: number): string {
+  if (cp >= 1000) return 'more than a piece';
+  if (cp >= 500) return 'about a piece';
+  if (cp >= 250) return 'about two pawns';
+  return 'about a pawn';
+}
+
+/** A real mistake worth flagging: big loss, and the game wasn't already decided either way. */
+export function isMistake(j: MoveJudgement, threshold = 150): boolean {
+  if (j.loss < threshold) return false;
+  if (j.before <= -500) return false; // already lost
+  if (j.after >= 400) return false; // still clearly winning
+  return true;
 }
 
 /** Evaluation in centipawns from the side to move's point of view. */
