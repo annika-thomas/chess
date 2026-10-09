@@ -52,10 +52,16 @@ export function nextLesson(): LessonRef | undefined {
 }
 
 /** A lesson is open if it's done, or it's the next one, or the learner skipped ahead to it. */
+/**
+ * A lesson is open if it's done, or it's no further than one step past your furthest completed lesson,
+ * or it's the first one you haven't done. Units added earlier in the course never re-lock lessons
+ * you had already reached.
+ */
 export function isUnlocked(ref: LessonRef): boolean {
   if (isLessonDone(ref.lesson.id)) return true;
+  const furthest = LESSONS.reduce((max, l) => (isLessonDone(l.lesson.id) ? Math.max(max, l.order) : max), -1);
   const next = nextLesson();
-  return !next || ref.order <= next.order;
+  return !next || ref.order <= next.order || ref.order <= furthest + 1;
 }
 
 const learned = (c: CardRef) => !!state.cards[c.id];
