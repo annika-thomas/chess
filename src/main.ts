@@ -13,6 +13,8 @@ import { renderRepertoire } from './ui/repertoire';
 registerSW({ immediate: true });
 
 const root = document.getElementById('app')!;
+clearTimeout((window as Window & { __bootTimer?: number }).__bootTimer);
+root.textContent = '';
 
 function start(): void {
   initApp(root, { learn: renderLearn, practice: renderPractice, repertoire: renderRepertoire, profile: renderProfile });

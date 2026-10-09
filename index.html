@@ -15,7 +15,19 @@
     <title>Chess Mentor</title>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <div id="splash" style="min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;text-align:center;font-family:-apple-system,system-ui,sans-serif;color:#d9d8d6;background:#302e2b">
+        <div style="font-size:72px;color:#f3dfbf">♞</div>
+        <div id="splash-msg" style="font-size:17px">Loading Chess Mentor…</div>
+      </div>
+    </div>
+    <script>
+      // If the app bundle never starts, explain instead of leaving a blank screen.
+      window.__bootTimer = setTimeout(function () {
+        var m = document.getElementById('splash-msg');
+        if (m) m.innerHTML = '<b>Chess Mentor didn’t start.</b><br><br>Close the app completely and open it again.<br><br>If this keeps happening, the site is serving the source files instead of the built app: in the GitHub repo set <b>Settings → Pages → Source</b> to <b>GitHub Actions</b>.';
+      }, 8000);
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
