@@ -30,7 +30,7 @@ export const blackItalian: Unit = {
   title: 'The Mirror',
   subtitle: 'The Italian from Black’s side',
   section: E4,
-  color: '#ff4b4b',
+  color: '#6e4a2f',
   icon: '♝',
   side: 'b',
   lessons: [
@@ -112,7 +112,7 @@ export const ruyScotch: Unit = {
   title: 'Ruy Lopez & Scotch',
   subtitle: '3.Bb5 and 3.d4',
   section: E4,
-  color: '#e5a500',
+  color: '#9a7b3c',
   icon: '♜',
   side: 'b',
   lessons: [
@@ -186,7 +186,7 @@ export const otherE4: Unit = {
   title: 'Other 2nd Moves',
   subtitle: 'Vienna, King’s Gambit, Center Game, Four Knights',
   section: E4,
-  color: '#a5612b',
+  color: '#7a5c45',
   icon: '♞',
   side: 'b',
   lessons: [
@@ -238,7 +238,7 @@ export const qgd: Unit = {
   title: 'Queen’s Gambit Declined',
   subtitle: 'Your rock-solid answer to 1.d4',
   section: D4,
-  color: '#00cd9c',
+  color: '#44705a',
   icon: '♛',
   side: 'b',
   lessons: [
@@ -350,7 +350,7 @@ export const carlsbad: Unit = {
   title: 'Exchange & Carlsbad',
   subtitle: 'When White trades on d5',
   section: D4,
-  color: '#4b4b9f',
+  color: '#4f5d75',
   icon: '♖',
   side: 'b',
   lessons: [
@@ -411,7 +411,7 @@ export const vsSystems: Unit = {
   title: 'vs London & Systems',
   subtitle: 'One setup against everything else',
   section: D4,
-  color: '#777777',
+  color: '#6b6660',
   icon: '♚',
   side: 'b',
   lessons: [

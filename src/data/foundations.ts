@@ -8,7 +8,7 @@ export const principles: Unit = {
   title: 'Opening Principles',
   subtitle: 'The three jobs of every opening',
   section: SECTION,
-  color: '#58cc02',
+  color: '#6f8f4e',
   icon: '♙',
   lessons: [
     {
@@ -198,7 +198,7 @@ export const survive: Unit = {
   title: 'Survive the Opening',
   subtitle: 'Beginner traps and the blunder check',
   section: SECTION,
-  color: '#ff9600',
+  color: '#a8642c',
   icon: '🛡',
   lessons: [
     {

@@ -22,7 +22,7 @@ export const italian: Unit = {
   title: 'The Italian Game',
   subtitle: 'Your main weapon as White',
   section: SECTION,
-  color: '#1cb0f6',
+  color: '#8b5a2b',
   icon: '♗',
   side: 'w',
   lessons: [
@@ -170,7 +170,7 @@ export const punish: Unit = {
   title: 'Punish Mistakes',
   subtitle: 'Traps after 1.e4 e5 2.Nf3',
   section: SECTION,
-  color: '#ce82ff',
+  color: '#7b3f3f',
   icon: '⚡',
   side: 'w',
   lessons: [
@@ -267,7 +267,7 @@ export const beyond: Unit = {
   title: 'Beyond 1...e5',
   subtitle: 'Sicilian, French, Caro-Kann, and more',
   section: SECTION,
-  color: '#2b70c9',
+  color: '#566a80',
   icon: '♘',
   side: 'w',
   lessons: [

@@ -32,7 +32,7 @@ export const patternGym: Unit = {
   title: 'Pattern Gym',
   subtitle: 'Train your eye: structures, openings, tactics',
   section: SECTION,
-  color: '#ff86d0',
+  color: '#7d4a63',
   icon: '👁',
   lessons: [
     {

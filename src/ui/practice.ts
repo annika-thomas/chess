@@ -37,7 +37,7 @@ export function renderPractice(host: HTMLElement): void {
           : 'Finish your first lesson and reviews will appear here.',
       due ? `Review ${due}` : 'Practice anyway',
       () => startSession('Daily review', buildReview(), 'practice'),
-      { accent: '#58cc02', disabled: !learnedAny },
+      { accent: '#6f8f4e', disabled: !learnedAny },
     ),
   );
 
@@ -50,7 +50,7 @@ export function renderPractice(host: HTMLElement): void {
         : 'Unlocks after lessons with recognition drills (Unit 3 onward).',
       'Sprint',
       () => startSession('Pattern sprint', buildPatternSprint(), 'practice'),
-      { accent: '#ff86d0', disabled: sprint.length < 3 },
+      { accent: '#7d4a63', disabled: sprint.length < 3 },
     ),
   );
 
@@ -63,7 +63,7 @@ export function renderPractice(host: HTMLElement): void {
         : 'Connect Lichess or Chess.com and I will find where your games left your repertoire.',
       drills ? 'Fix them' : 'Connect',
       () => (drills ? startSession('Your games', buildGameDrills(), 'practice') : go('profile')),
-      { accent: '#1cb0f6' },
+      { accent: '#8b5a2b' },
     ),
   );
 
