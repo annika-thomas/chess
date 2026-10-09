@@ -16,7 +16,17 @@ import { renderPractice } from './ui/practice';
 import { renderProfile } from './ui/profile';
 import { renderRepertoire } from './ui/repertoire';
 
-registerSW({ immediate: true });
+// Home-screen apps on iOS are usually resumed, not relaunched, so also check for a new version
+// whenever the app comes back to the foreground (and hourly while open). autoUpdate then reloads.
+registerSW({
+  immediate: true,
+  onRegisteredSW(_url, reg) {
+    if (!reg) return;
+    const check = () => reg.update().catch(() => undefined);
+    document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && check());
+    setInterval(check, 60 * 60 * 1000);
+  },
+});
 setFigurineSource(() => state.settings.figurines);
 
 const root = document.getElementById('app')!;
