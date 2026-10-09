@@ -16,6 +16,8 @@ export interface BoardOpts {
   viewOnly?: boolean;
   /** Called when any square is tapped (used by coordinate drills). */
   onSelect?: (square: string) => void;
+  /** Called when the board returns to the live position after showing an earlier one. */
+  onLive?: () => void;
 }
 
 const color = (s: Side) => (s === 'w' ? 'white' : 'black');
@@ -50,6 +52,7 @@ export class Board {
   private opts: BoardOpts;
   private interactive = false;
   private shapes: DrawShape[] = [];
+  private viewing = false;
 
   constructor(opts: BoardOpts, fen?: string) {
     this.opts = opts;
@@ -123,6 +126,10 @@ export class Board {
   }
 
   sync(lastMove?: Key[]): void {
+    if (this.viewing) {
+      this.viewing = false;
+      this.opts.onLive?.();
+    }
     const hist = this.chess.history({ verbose: true });
     const last = hist[hist.length - 1];
     this.cg.set({
@@ -134,6 +141,21 @@ export class Board {
         color: this.interactive ? color(this.chess.turn()) : undefined,
         dests: this.interactive ? (legalDests(this.chess) as Map<Key, Key[]>) : new Map(),
       },
+    });
+  }
+
+  /** Show the position after `ply` moves of this game without changing the game. sync() goes back to it. */
+  showPly(ply: number): void {
+    const hist = this.chess.history({ verbose: true });
+    const m = hist[ply - 1];
+    const fen = m ? m.after : (hist[0]?.before ?? this.chess.fen());
+    this.viewing = true;
+    this.cg.set({
+      fen,
+      turnColor: fen.split(' ')[1] === 'w' ? 'white' : 'black',
+      check: new Chess(fen).inCheck(),
+      lastMove: m ? [m.from as Key, m.to as Key] : undefined,
+      movable: { color: undefined, dests: new Map() },
     });
   }
 

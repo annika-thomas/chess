@@ -1456,7 +1456,7 @@ cg-board square.mentor-bad {
   margin: 0 auto;
 }
 .game .board-wrap {
-  max-width: max(240px, min(560px, calc(100dvh - 300px - var(--safe-t) - var(--safe-b))));
+  max-width: max(240px, min(560px, calc(100dvh - 330px - var(--safe-t) - var(--safe-b))));
   flex: none;
 }
 .game-title {
@@ -1499,12 +1499,72 @@ cg-board square.mentor-bad {
   margin: 0;
 }
 .game-moves {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 3px;
   margin: 8px 16px 0;
+  min-height: 28px;
+  max-height: 60px;
+  overflow-y: auto;
+  overflow-x: hidden;
   color: var(--muted);
   font-size: 13px;
-  font-family: ui-monospace, Menlo, monospace;
-  overflow-wrap: anywhere;
-  min-height: 18px;
+}
+.gm-num {
+  margin-left: 4px;
+  font-size: 12px;
+}
+.gm {
+  border: none;
+  background: none;
+  color: var(--text2);
+  font: inherit;
+  font-weight: 700;
+  padding: 3px 5px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.gm.theirs {
+  color: var(--muted);
+}
+.gm.on {
+  background: var(--green-dark);
+  color: #fff;
+}
+.view-banner {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 8px;
+  z-index: 5;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(20, 19, 17, 0.88);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.view-banner[hidden] {
+  display: none;
+}
+.view-banner b {
+  color: var(--green);
+}
+.game-controls .nav-btn {
+  flex: none;
+  width: 52px;
+  padding: 10px 0;
+}
+.coach-strip[hidden] {
+  display: none;
 }
 .game-controls {
   display: flex;
@@ -1735,6 +1795,11 @@ cg-board square.mentor-target {
   height: 1.25em;
 }
 .coach-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.coach-line {
   display: flex;
   gap: 10px;
   align-items: flex-start;

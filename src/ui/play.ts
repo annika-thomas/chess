@@ -3,7 +3,7 @@ import { botMove, engine, evaluate, isMistake, judgeMove, lossLabel, LEVELS, lev
 import { annotatable, weekStart } from '../engine/homework';
 import { annotateGame, uciToSan } from './annotate';
 import type { Boss } from '../data/bosses';
-import { parseLine } from '../engine/notation';
+import { formatMoves, parseLine } from '../engine/notation';
 import { buildBook, gradeGame, makeDrill, type Game } from '../engine/importer';
 import { fenKey, sameSan } from '../engine/notation';
 import { currentRd, isProvisional, rate } from '../engine/rating';
@@ -229,18 +229,67 @@ function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss, s
       afterLearnerMove(san);
       return true;
     },
+    onLive: () => {
+      if (viewPly === null) return;
+      viewPly = null;
+      banner.hidden = true;
+      showMoves();
+    },
   });
 
   const startMoves = boss ? parseLine(boss.start).moves : [];
   if (boss) board.load(startMoves);
 
+  // The coach strip only talks about the current turn: your move and the computer's reply.
+  // It's cleared when you make your next move.
   const coach = h('div.coach-strip');
-  const TONE_ICON: Record<'info' | 'good' | 'warn', IconName> = { info: 'bulb', good: 'check', warn: 'book' };
-  const say = (text: string, tone: 'info' | 'good' | 'warn' = 'info') => {
-    clear(coach);
-    coach.className = `coach-strip ${tone}`;
-    coach.append(icon(TONE_ICON[tone], 'coach-icon'), md(text));
+  type Tone = 'info' | 'good' | 'warn';
+  const TONE_ICON: Record<Tone, IconName> = { info: 'bulb', good: 'check', warn: 'book' };
+  const RANK: Record<Tone, number> = { info: 0, good: 1, warn: 2 };
+  let stripTone: Tone = 'info';
+  /** Add a line to this turn's notes. */
+  const note = (text: string, tone: Tone = 'info') => {
+    if (!coach.childElementCount || RANK[tone] >= RANK[stripTone]) stripTone = tone;
+    coach.className = `coach-strip ${stripTone}`;
+    coach.append(h(`div.coach-line.${tone}`, icon(TONE_ICON[tone], 'coach-icon'), md(text)));
+    coach.hidden = false;
+    coach.scrollTop = coach.scrollHeight;
   };
+  /** Replace all notes with one message. */
+  const say = (text: string, tone: Tone = 'info') => {
+    clear(coach);
+    note(text, tone);
+  };
+  const newTurn = () => {
+    clear(coach);
+    coach.hidden = true;
+  };
+
+  // Look back through the game: tap a move, or use the arrows. The game waits until you return.
+  let viewPly: number | null = null;
+  const plies = () => board.chess.history().length;
+  const banner = h('button.view-banner', { type: 'button' });
+  banner.hidden = true;
+  board.el.append(banner);
+  const prevBtn = h('button.btn.ghost.nav-btn', { type: 'button', 'aria-label': 'Previous move' }, icon('prev'));
+  const nextBtn = h('button.btn.ghost.nav-btn', { type: 'button', 'aria-label': 'Next move' }, icon('next'));
+  function view(k: number): void {
+    const n = plies();
+    if (k >= n) return void board.sync();
+    viewPly = Math.max(0, k);
+    board.showPly(viewPly);
+    const m = board.chess.history()[viewPly - 1];
+    clear(banner);
+    banner.append(
+      h('span', { html: viewPly ? `Viewing ${figHtml(formatMoves([...Array(viewPly - 1).fill(''), m], viewPly - 1))}` : 'Viewing the start' }),
+      h('b', 'Back to game ›'),
+    );
+    banner.hidden = false;
+    showMoves();
+  }
+  prevBtn.addEventListener('click', () => view((viewPly ?? plies()) - 1));
+  nextBtn.addEventListener('click', () => viewPly !== null && view(viewPly + 1));
+  banner.addEventListener('click', () => board.sync());
   const status = h('span.thinking');
   const counter = h('span.thinking');
   const movesEl = h('div.game-moves');
@@ -260,7 +309,7 @@ function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss, s
       bar(myName, `~${state.rating.r}${isProvisional(state.rating) ? '?' : ''}`, counter),
       coach,
       movesEl,
-      h('div.game-controls', boss ? null : takeback, resign),
+      h('div.game-controls', prevBtn, nextBtn, boss ? null : takeback, resign),
     ),
   );
   if (boss) {
@@ -277,19 +326,32 @@ function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss, s
       : `Good luck! Remember the three jobs: center, develop, castle.`,
   );
 
-  const showMoves = () => {
-    const h2 = board.chess.history();
-    const parts: string[] = [];
-    h2.forEach((m, i) => parts.push(i % 2 === 0 ? `${i / 2 + 1}.${m}` : m));
-    movesEl.innerHTML = figHtml(parts.slice(-14).join(' '));
-    movesEl.dataset.plies = String(h2.length);
-  };
+  function showMoves(): void {
+    const hist = board.chess.history();
+    const current = (viewPly ?? hist.length) - 1;
+    clear(movesEl);
+    let on: HTMLElement | undefined;
+    hist.forEach((m, i) => {
+      if (i % 2 === 0) movesEl.append(h('span.gm-num', `${i / 2 + 1}.`));
+      const mine = (i % 2 === 0) === (side === 'w');
+      const b = h(`button.gm${mine ? '' : '.theirs'}${i === current ? '.on' : ''}`, { type: 'button', html: figHtml(m) });
+      b.addEventListener('click', () => view(i + 1));
+      if (i === current) on = b;
+      movesEl.append(b);
+    });
+    movesEl.dataset.plies = String(hist.length);
+    // Keep the selected move in sight (the list only scrolls vertically).
+    if (on) movesEl.scrollTop = Math.max(0, on.offsetTop - movesEl.clientHeight + on.offsetHeight + 4);
+    (prevBtn as HTMLButtonElement).disabled = current < 0;
+    (nextBtn as HTMLButtonElement).disabled = viewPly === null;
+  }
 
   function bookEntry() {
     return book.get(fenKey(board.chess.fen()));
   }
 
   function afterLearnerMove(san: string): void {
+    newTurn();
     // The board has already played the move; look up the position before it.
     const prev = new Chess();
     const hist = board.chess.history();
@@ -299,11 +361,11 @@ function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss, s
       const hit = [...entry.moves.entries()].find(([m]) => sameSan(m, san));
       if (hit) {
         lastBookLine = hit[1].line.name;
-        say(`**Book move.** ${hit[1].note}`, 'good');
+        note(`**Book move.** ${hit[1].note}`, 'good');
       } else if (!deviatedNoted) {
         deviatedNoted = true;
         const [exp, info] = [...entry.moves.entries()][0];
-        say(`Your repertoire plays **${exp}** here (${info.line.name}). ${info.note} Keep playing, and I’ll add it to your drills.`, 'warn');
+        note(`Your repertoire plays **${exp}** here (${info.line.name}). ${info.note} Keep playing, and I’ll add it to your drills.`, 'warn');
       }
     }
     showMoves();
@@ -341,7 +403,7 @@ function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss, s
     sound.wrong();
     const back = h('button.btn.primary.small-btn', { type: 'button' }, icon('undo'), ' Take it back');
     const on = h('button.btn.ghost.small-btn', { type: 'button' }, 'Play on');
-    say(
+    note(
       `**Blunder guard:** ${san} loses ${lossLabel(loss)}. What can your opponent capture, check or threaten now? (Taking it back makes this game unrated.)`,
       'warn',
     );
@@ -354,7 +416,8 @@ function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss, s
       board.setInteractive(true);
     });
     on.addEventListener('click', () => {
-      say('Playing on. Watch what happens next: it’s a good moment to annotate later.', 'info');
+      coach.lastElementChild?.remove(); // the buttons
+      note('Playing on. Watch what happens next: it’s a good moment to annotate later.');
       setTimeout(botTurn, 150);
     });
   }
@@ -394,7 +457,7 @@ function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss, s
       if (repertoire && !leftBookNoted && board.chess.history().length > 0) {
         leftBookNoted = true;
         // Keep the "your repertoire plays X" note visible if that's why we left book.
-        if (!deviatedNoted) say('Out of book. You’re on your own now: use the plans from your lessons.');
+        note('Out of book. You’re on your own now: use the plans from your lessons.');
       }
       try {
         const uci = await botMove(board.chess.fen(), level);
@@ -411,12 +474,27 @@ function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss, s
     const wait = Math.max(0, 450 - (Date.now() - started));
     setTimeout(() => {
       if (over) return;
-      board.play(san!);
+      const mv = board.play(san!);
       thinking = false;
       status.textContent = '';
+      describeReply(mv);
       showMoves();
       if (!checkEnd()) board.setInteractive(true);
     }, wait);
+  }
+
+  const PIECE: Record<string, string> = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
+
+  /** Say what the computer just did, so a fast reply never goes unnoticed. */
+  function describeReply(mv: { san: string; to: string; captured?: string }): void {
+    const i = plies() - 1;
+    const label = `${Math.floor(i / 2) + 1}${i % 2 === 0 ? '.' : '...'}${mv.san}`;
+    let text = `**${level.name}** played **${label}**`;
+    if (mv.captured) text += `, taking your ${PIECE[mv.captured]} on ${mv.to}`;
+    text += '.';
+    const check = board.chess.inCheck() && !board.chess.isCheckmate();
+    if (check) text += ' **You’re in check.**';
+    note(text, mv.captured || check ? 'warn' : 'info');
   }
 
   function checkEnd(): boolean {
