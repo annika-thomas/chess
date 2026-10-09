@@ -37,7 +37,7 @@ export const safetyCheck: Lesson = {
       'w',
       '1.e4 e5 2.Bc4 Bc5 3.d3 Qh4',
       ['Qf3'],
-      'Defend against the threat.',
+      'Black just played 3...Qh4. Run the safety check, then defend.',
       '**Qf3** guards f2. (Qe2, Nh3 and g3 also work.) Spotting the threat was the hard part. That’s why the safety check comes before every move.',
       { accept: ['Qe2', 'Nh3', 'g3', 'Qd2'] },
     ),
@@ -114,7 +114,7 @@ export const backRank: Lesson = {
     ),
     find('w', '', ['Re8#'], 'Mate in one.', '**Re8#**: the pawns on f7, g7 and h7 are the king’s own prison bars.', { fen: '6k1/5ppp/8/8/8/8/5PPP/4R1K1 w - - 0 1' }),
     choice(
-      'Black has played ...h6 earlier. Is Re8 still mate?',
+      'Black’s pawn is on h6, not h7. Is Re8 checkmate?',
       [
         yes('No: the king escapes to h7', 'That little pawn move is called giving the king “luft” (air). A cheap insurance policy.'),
         no('Yes: same pattern', 'Look at h7: the pawn moved to h6, so h7 is now an escape square.'),

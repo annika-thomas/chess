@@ -79,6 +79,15 @@ describe('curriculum', () => {
     }
   });
 
+  it('card prompts stand alone, since reviews show them out of lesson order', () => {
+    const leadIn = /^(same|now|again|also|then|and|but|so)\b/i;
+    const backRef = /\b(same (way|idea|pattern|position|trick)|this time|earlier|as before|like before|previous|last (one|question)|again)\b/i;
+    for (const c of CARDS) {
+      const prompt = (c.exercise as { prompt?: string }).prompt ?? '';
+      expect(leadIn.test(prompt) || backRef.test(prompt), `${c.id}: "${prompt}"`).toBe(false);
+    }
+  });
+
   it('lists every line in the repertoire', () => {
     expect(REPERTOIRE.length).toBe(Object.keys(L).length);
   });

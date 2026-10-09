@@ -37,7 +37,7 @@ export const italian: Unit = {
           { title: 'The Italian Game', setup: '1.e4 e5 2.Nf3 Nc6 3.Bc4', side: 'w', arrows: [arrow('c4', 'f7')] },
         ),
         walk('w', upTo(ITALIAN_MAIN, 6)),
-        recall('w', upTo(ITALIAN_MAIN, 6), { prompt: 'Now from memory' }),
+        recall('w', upTo(ITALIAN_MAIN, 6), { prompt: 'Play the Italian from memory.' }),
         walk('w', upTo(ITALIAN_MAIN, 10), { from: 6 }),
         recall('w', upTo(ITALIAN_MAIN, 10)),
         choice(
@@ -253,7 +253,7 @@ Bxd1?? {Black grabs the queen...}
           'w',
           '1.e4 e5 2.Nf3 f6 3.Nxe5 fxe5',
           ['Qh5+', 'g6', 'Qxe5+'],
-          'Black weakened the king with 2...f6. You sacrificed a knight. Now cash in.',
+          'Black weakened the king with 2...f6, and you sacrificed your knight on e5. Cash in.',
           "Qh5+ forces ...g6, and Qxe5+ forks the king and the h8 rook. Pawn moves in front of the king create holes like this.",
           { tags: ['king-safety', 'fork'] },
         ),
@@ -286,7 +286,7 @@ export const beyond: Unit = {
         walk('w', ALAPIN_NF6),
         recall('w', ALAPIN_NF6),
         choice(
-          'Same idea in both lines. What is the purpose of 2.c3?',
+          'Against the Sicilian (1...c5) you play 2.c3, the Alapin. What is its purpose?',
           [
             yes('Prepare d4 so you can recapture with a pawn', 'Yes. If Black takes on d4, you take back with the c-pawn and keep two pawns in the center.'),
             no('Develop the queen via c2', 'Not the point.'),
@@ -344,7 +344,7 @@ export const beyond: Unit = {
           'w',
           '1.e4 Nc6 2.Nf3 e5',
           ['Bc4'],
-          'Black started with 1...Nc6, but now look at the position. Play your repertoire move.',
+          'Black started with 1...Nc6. Look at the position as it stands and play your repertoire move.',
           "It's the Italian! 1...Nc6 2.Nf3 e5 transposed to your main line, so play 3.Bc4.",
           { accept: ['Bb5', 'd4'], tags: ['transposition'] },
         ),

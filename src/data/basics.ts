@@ -88,7 +88,7 @@ export const basics: Unit = {
         ]),
         find('w', '', ['e4'], 'You are White. Play **e4**.', 'A pawn move: just the square.'),
         find('w', '1.e4 e5', ['Nf3'], 'Play **`Nf3`**: a knight to f3.', 'N is the knight. It jumps to f3.'),
-        find('b', '1.e4 e5 2.Nf3', ['Nc6'], 'You are Black now (the board is flipped). Play **`Nc6`**.', 'Knight to c6. From Black’s side, c6 is on the right half of the board.'),
+        find('b', '1.e4 e5 2.Nf3', ['Nc6'], 'You are Black (the board is flipped). Play **`Nc6`**.', 'Knight to c6. From Black’s side, c6 is on the right half of the board.'),
         find('w', '1.e4 e5 2.Nf3 Nc6', ['Bc4'], 'Play **`Bc4`**.', 'Bishop to c4.'),
         choice('Which move does the arrow show?', [yes('`Bb5`'), no('`Nb5`', 'It’s the bishop moving, not a knight.'), no('`b5`', 'That would be a pawn move.'), no('`Bc4`', 'Look again at where the arrow ends.')], {
           setup: '1.e4 e5 2.Nf3 Nc6',
