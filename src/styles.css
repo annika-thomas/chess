@@ -470,9 +470,10 @@ p {
   background: var(--card);
   animation: bob 1.5s ease-in-out infinite;
 }
+/* Bob with `translate` (composes with the inline transform) so nothing else on the path moves. */
 @keyframes bob {
   50% {
-    margin-bottom: 14px;
+    translate: 0 -6px;
   }
 }
 .footnote {
@@ -660,6 +661,11 @@ p {
 .board-wrap.veiled .cg-wrap {
   filter: blur(14px) grayscale(1);
   opacity: 0.35;
+}
+.board-wrap.veiled.waiting::after {
+  content: '♞';
+  color: #f3dfbf;
+  opacity: 0.6;
 }
 .board-wrap.veiled::after {
   content: '?';

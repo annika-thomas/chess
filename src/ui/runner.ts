@@ -300,7 +300,8 @@ const mountChoice =
       board.highlight(ex.highlights);
     }
 
-    wrap.append(prompt(ex.prompt, ex.flash ? `Memorize the position: it disappears in ${Math.round(ex.flash / 1000)}s` : undefined));
+    const secs = ex.flash ? Math.round(ex.flash / 1000) : 0;
+    wrap.append(prompt(ex.prompt, ex.flash ? `Read the question first. When you tap Show board, you get ${secs} seconds to look.` : undefined));
     if (board) wrap.append(board.el);
     wrap.append(opts);
     host.append(wrap);
@@ -308,20 +309,27 @@ const mountChoice =
     // While the options are visible, the board shrinks to leave room for them.
     const fit = () => wrap.style.setProperty('--n', String(options.length));
     if (ex.flash && board) {
-      const bar = h('div.flashbar', h('div', { style: `animation-duration:${ex.flash}ms` }));
-      board.el.append(bar);
+      // Flash drills: the board stays covered until the learner has read the question and taps to start,
+      // so the timer only measures looking at the position.
+      board.el.classList.add('veiled', 'waiting');
       opts.classList.add('hidden');
-      flashTimer = window.setTimeout(() => {
-        board!.el.classList.add('veiled');
-        fit();
-        opts.classList.remove('hidden');
-        const sub = wrap.querySelector('.sub');
-        if (sub) sub.textContent = 'From memory:';
-      }, ex.flash);
+      const sub = wrap.querySelector('.sub');
+      ctx.button('Show board', () => {
+        board!.el.classList.remove('veiled', 'waiting');
+        board!.el.append(h('div.flashbar', h('div', { style: `animation-duration:${ex.flash}ms` })));
+        if (sub) sub.textContent = `Memorize it: ${secs} seconds…`;
+        ctx.button('Check', check, false);
+        flashTimer = window.setTimeout(() => {
+          board!.el.classList.add('veiled');
+          fit();
+          opts.classList.remove('hidden');
+          if (sub) sub.textContent = 'From memory:';
+        }, ex.flash);
+      });
     } else {
       fit();
+      ctx.button('Check', check, false);
     }
-    ctx.button('Check', check, false);
 
     function check(): void {
       if (picked < 0) return;
