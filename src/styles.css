@@ -1782,3 +1782,22 @@ cg-board square.mentor-target {
 .verdict .icon {
   vertical-align: -0.22em;
 }
+
+/* Glossary terms: tap for a definition. */
+.term {
+  border-bottom: 1.5px dotted var(--gold);
+  cursor: help;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.term:active {
+  background: rgba(230, 180, 34, 0.18);
+  border-radius: 3px;
+}
+.term-sheet h2 {
+  font-size: 26px;
+}
+.term-sheet p {
+  font-size: 17px;
+  color: var(--text2);
+}

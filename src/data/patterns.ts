@@ -1,5 +1,5 @@
 import type { ChoiceOption, Unit } from '../types';
-import { choice, find, info, no, upTo, yes } from './build';
+import { choice, find, info, no, upTo, walk, yes } from './build';
 import {
   ALAPIN_D5,
   CARO_ADVANCE,
@@ -214,6 +214,18 @@ export const patternGym: Unit = {
           'Mate in 2.',
           "Légal's mate: Bxf7+ Ke7 Nd5#.",
           { tags: ['mate', 'pin'] },
+        ),
+        walk(
+          'w',
+          `1.e4 e5 2.Nf3 Nc6 3.Bc4 {Bishop aims at f7.}
+Nf6 {The Two Knights. Natural, but it allows the next move.}
+4.Ng5 {Knight AND bishop hit f7, which only the king defends.}
+d5 {Black blocks the bishop. Correct!}
+5.exd5 Nxd5? {A natural recapture, but a mistake. (5...Na5! is the right defense.)}
+6.Nxf7 {The knight takes on f7 and forks the queen and rook.}
+Kxf7 7.Qf3+ {Black's king is dragged into the open.}
+Ke6 8.Nc3 {Everything piles on the pinned d5 knight. This is the Fried Liver Attack: now you know why you play 3...Bc5.}`,
+          { title: 'The Fried Liver Attack', tags: ['f7', 'king-safety', 'fork', 'pin'] },
         ),
       ],
     },

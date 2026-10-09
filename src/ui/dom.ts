@@ -1,3 +1,5 @@
+import { GLOSSARY } from '../data/glossary';
+
 type Child = Node | string | null | undefined | false;
 type Attrs = Record<string, string | boolean | number | EventListener | undefined>;
 
@@ -51,21 +53,42 @@ export function setFigurineSource(fn: () => boolean): void {
   figurinesOn = fn;
 }
 
-/** One line of markdown-style bold and italic, with piece icons, as HTML-safe markup. `Code` stays as letters. */
-export function inline(text: string): string {
+/**
+ * Underline the first mention of each glossary term (tap for a definition). Uses placeholders so a
+ * term's markup can never be matched again by a later term.
+ */
+function linkTerms(html: string, seen: Set<string>): string {
+  const spans: string[] = [];
+  for (const t of GLOSSARY) {
+    if (seen.has(t.key)) continue;
+    html = html.replace(t.pattern, (m) => {
+      seen.add(t.key);
+      spans.push(`<span class="term" role="button" tabindex="0" data-term="${t.key}">${m}</span>`);
+      return `\u0000${spans.length - 1}\u0000`;
+    });
+  }
+  return html.replace(/\u0000(\d+)\u0000/g, (_, i: string) => spans[Number(i)]);
+}
+
+/**
+ * One line of markdown-style bold and italic, with piece icons, as HTML-safe markup. `Code` stays as letters.
+ * Glossary terms are linked unless `terms` is false (e.g. inside answer buttons).
+ */
+export function inline(text: string, terms = true, seen = new Set<string>()): string {
   // `backticks` keep notation as letters (lessons that teach the letters themselves).
   const html = text
     .split('`')
-    .map((part, i) => (i % 2 ? `<span class="san">${escape(part)}</span>` : fig(escape(part))))
+    .map((part, i) => (i % 2 ? `<span class="san">${escape(part)}</span>` : fig(terms ? linkTerms(escape(part), seen) : escape(part))))
     .join('');
   return html.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\*(.+?)\*/g, '<i>$1</i>');
 }
 
 /** Minimal markdown: **bold**, *italic*, paragraphs. Input is our own content, but we escape anyway. */
 export function md(text: string): HTMLElement {
+  const seen = new Set<string>();
   const html = text
     .split(/\n{2,}/)
-    .map((p) => `<p>${inline(p)}</p>`)
+    .map((p) => `<p>${inline(p, true, seen)}</p>`)
     .join('');
   return h('div.md', { html });
 }

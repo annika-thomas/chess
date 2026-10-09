@@ -284,7 +284,7 @@ const mountChoice =
     let picked = -1;
 
     options.forEach((o, idx) => {
-      const btn = h('button.option', { type: 'button', html: inline(o.text) });
+      const btn = h('button.option', { type: 'button', html: inline(o.text, false) });
       btn.addEventListener('click', () => {
         picked = idx;
         opts.querySelectorAll('.option').forEach((b, k) => b.classList.toggle('selected', k === idx));

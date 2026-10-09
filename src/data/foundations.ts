@@ -257,49 +257,39 @@ Nf6 {Block again, and develop. Two knights out; White's queen has made 3 moves a
     {
       id: 'survive-f7',
       title: 'The f7 square',
-      goal: 'Why f7 is a target, and the Fried Liver attack',
+      goal: 'The weak spot next to the king',
       tags: ['f7'],
       exercises: [
         info(
-          "At the start, **f7** (and f2 for White) is the only square defended by the king alone. Most early attacks aim there. Here is the famous **Fried Liver Attack**: play White's moves and watch it happen.",
+          'At the start, **f7** (and f2 for White) is defended only by the king. That makes it the favorite target of early attacks. You already met one: Scholar’s Mate.',
           { title: 'Target: f7', side: 'b', highlights: ['f7', 'f2'] },
         ),
-        walk(
-          'w',
-          `1.e4 e5 2.Nf3 Nc6 3.Bc4 {Bishop at f7.}
-Nf6 {The Two Knights. It looks natural, but it allows the next move.}
-4.Ng5 {Now knight AND bishop hit f7.}
-d5 {Black blocks the bishop. Correct!}
-5.exd5 Nxd5? {But this natural recapture is a mistake. (5...Na5! is the correct defense.)}
-6.Nxf7 {The sacrifice! It forks queen and rook.}
-Kxf7 7.Qf3+ {Black's king is dragged into the open.}
-Ke6 8.Nc3 {Everything piles on the pinned d5 knight. White's attack is very dangerous.}`,
-          { title: 'The Fried Liver', tags: ['f7', 'king-safety'] },
+        info(
+          'If Black plays **3...Nf6**, White can jump **4.Ng5**: the knight and bishop both aim at f7, and only the king defends it. Black can survive, but it gets complicated. With **3...Bc5**, which you’ll play as Black, it doesn’t work. Here’s why.',
+          {
+            title: 'Why you play 3...Bc5',
+            setup: '1.e4 e5 2.Nf3 Nc6 3.Bc4 Nf6 4.Ng5',
+            side: 'b',
+            arrows: [arrow('g5', 'f7', 'red'), arrow('c4', 'f7', 'red')],
+            highlights: ['f7'],
+          },
         ),
         choice(
-          'This is why, as Black, you play 3...Bc5 instead of 3...Nf6. After 3...Bc5, what is White threatening with 4.Ng5?',
+          'Same idea, but you played 3...Bc5. White jumps 4.Ng5 anyway. What is White hoping to play next?',
           [
-            yes('Nxf7, forking the queen and rook', 'Yes. But here White has blundered: there is a simple punishment.'),
-            no('Qh5 checkmate', 'Not immediately.'),
-            no('Nothing at all', 'Look at f7: the knight attacks it, and so does the bishop.'),
+            yes('Nxf7: take on f7, attacking your queen and rook at once (a fork)', 'That’s the idea. But this time White moved too early: look at the knight on g5. Is anything defending it?'),
+            no('Qh5, checkmate', 'White’s queen is still on d1, so it can’t give checkmate next move.'),
+            no('Nothing: it’s a random move', 'The knight and the bishop both aim at f7. That’s a real threat.'),
           ],
-          { setup: '1.e4 e5 2.Nf3 Nc6 3.Bc4 Bc5 4.Ng5', side: 'b', tags: ['blunder-check'] },
+          { setup: '1.e4 e5 2.Nf3 Nc6 3.Bc4 Bc5 4.Ng5', side: 'b', arrows: [arrow('g5', 'f7', 'red')], tags: ['blunder-check', 'fork'] },
         ),
         find(
           'b',
           '1.e4 e5 2.Nf3 Nc6 3.Bc4 Bc5 4.Ng5',
           ['Qxg5'],
-          "White's knight jumped forward too early. Punish it.",
-          "The g5 knight is undefended, and your queen sees it along the d8–g5 diagonal. You win a whole piece. Always check: is the attacking piece itself protected?",
-          { tags: ['f7', 'punish'] },
-        ),
-        find(
-          'b',
-          '1.e4 e5 2.Nf3 Nc6 3.Bc4 Nf6 4.Ng5',
-          ['d5'],
-          'You played 3...Nf6 and White went for f7. Find the only good defense.',
-          '4...d5! blocks the bishop. The knight alone can\'t do much. After 5.exd5, play **5...Na5!**, not 5...Nxd5?, which allows the Fried Liver.',
-          { tags: ['f7'] },
+          "White's knight on g5 is hanging. Take it.",
+          'Nothing defends the g5 knight, and your queen reaches it along the d8–g5 diagonal: **4...Qxg5** wins a whole piece. Before defending against a threat, always check whether you can just take the attacker.',
+          { tags: ['f7', 'punish', 'hanging'] },
         ),
       ],
     },

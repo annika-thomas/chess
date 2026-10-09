@@ -4,11 +4,13 @@ import { blackItalian, carlsbad, otherE4, qgd, ruyScotch, vsSystems } from './bl
 import { principles, survive } from './foundations';
 import * as L from './lines';
 import { patternGym } from './patterns';
+import { tactics } from './tactics';
 import { beyond, italian, punish } from './white';
 
 export const UNITS: Unit[] = [
   basics,
   principles,
+  tactics,
   survive,
   italian,
   punish,
