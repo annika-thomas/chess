@@ -5,6 +5,7 @@ import { back, push, startSession } from './app';
 import { Board } from './board';
 import { clear, figHtml, h, md } from './dom';
 import { topBar } from './learn';
+import { icon } from './icons';
 
 const GROUPS: Array<[string, (l: RepertoireLine) => boolean]> = [
   ['As White · 1.e4', (l) => l.side === 'w'],
@@ -57,8 +58,8 @@ export function movesViewer(host: HTMLElement, o: ViewerOpts): void {
   const board = new Board({ orientation: o.side, viewOnly: true });
   const note = h('div.bubble.viewer-note');
   const list = h('div.movelist');
-  const prev = h('button.btn.ghost', { type: 'button', 'aria-label': 'Previous move' }, '◀');
-  const next = h('button.btn.ghost', { type: 'button', 'aria-label': 'Next move' }, '▶');
+  const prev = h('button.btn.ghost', { type: 'button', 'aria-label': 'Previous move' }, icon('prev'));
+  const next = h('button.btn.ghost', { type: 'button', 'aria-label': 'Next move' }, icon('next'));
   const backBtn = h('button.icon-btn', { type: 'button', 'aria-label': 'Back' }, '‹');
   backBtn.addEventListener('click', () => {
     board.destroy();

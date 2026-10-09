@@ -1653,3 +1653,132 @@ cg-board square.mentor-target {
 .game-controls .btn.primary {
   flex: 2;
 }
+
+/* ───── Icons (drawn art; replaces emoji) ───── */
+.icon {
+  display: inline-block;
+  width: 1.15em;
+  height: 1.15em;
+  vertical-align: -0.2em;
+  flex: none;
+}
+.icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.icon.ok {
+  color: var(--green);
+}
+.chip.streak .icon {
+  width: 1.3em;
+  height: 1.3em;
+  vertical-align: -0.28em;
+}
+.chip.streak.cold .icon {
+  filter: grayscale(1) brightness(0.8);
+}
+.ring span .icon {
+  color: var(--gold);
+  width: 14px;
+  height: 14px;
+}
+.node-icon .icon {
+  width: 34px;
+  height: 34px;
+  vertical-align: middle;
+  filter: drop-shadow(0 2px 1px rgba(0, 0, 0, 0.35));
+}
+.node.locked .node-icon .icon {
+  width: 24px;
+  height: 24px;
+  opacity: 0.7;
+}
+.node.boss .node-icon .icon {
+  width: 42px;
+  height: 42px;
+}
+.unit-icon .icon {
+  width: 40px;
+  height: 40px;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.35));
+}
+.unit-dot .icon {
+  width: 20px;
+  height: 20px;
+}
+.unit-name .icon {
+  width: 1.4em;
+  height: 1.4em;
+  vertical-align: -0.4em;
+}
+.sheet-art {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 6px;
+}
+.sheet-art .icon,
+.trophy .icon {
+  width: 72px;
+  height: 72px;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.45));
+}
+.trophy .icon {
+  width: 104px;
+  height: 104px;
+}
+.combo .icon,
+.streak-up .icon,
+.goal-hit .icon {
+  width: 1.25em;
+  height: 1.25em;
+}
+.coach-strip {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.coach-strip .coach-icon {
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+}
+.coach-strip.good .coach-icon {
+  color: var(--green);
+}
+.stars {
+  display: flex;
+  gap: 2px;
+  color: #6b6660;
+}
+.stars .icon {
+  width: 14px;
+  height: 14px;
+}
+.game-title .icon {
+  width: 1.25em;
+  height: 1.25em;
+  vertical-align: -0.25em;
+  margin-right: 2px;
+}
+.player-bar .icon {
+  color: var(--muted);
+}
+.controls .btn .icon {
+  width: 22px;
+  height: 22px;
+  vertical-align: middle;
+}
+.pstat b .icon {
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.12em;
+}
+.icon-btn.close .icon {
+  width: 24px;
+  height: 24px;
+}
+.verdict .icon {
+  vertical-align: -0.22em;
+}

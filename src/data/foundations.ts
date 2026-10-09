@@ -199,7 +199,7 @@ export const survive: Unit = {
   subtitle: 'Beginner traps and the blunder check',
   section: SECTION,
   color: '#a8642c',
-  icon: '🛡',
+  icon: 'icon:shield',
   lessons: [
     {
       id: 'survive-scholar',

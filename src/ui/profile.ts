@@ -4,6 +4,7 @@ import { analyzeGames, fetchChessCom, fetchLichess, latestRatings } from '../eng
 import { currentStreak, exportBackup, importBackup, resetAll, save, state, today } from '../engine/store';
 import { render } from './app';
 import { h } from './dom';
+import { icon } from './icons';
 import { topBar } from './learn';
 
 const GOALS: Array<[number, string]> = [
@@ -33,8 +34,8 @@ function weekChart(): HTMLElement {
   );
 }
 
-function stat(value: string, label: string): HTMLElement {
-  return h('div.pstat', h('b', value), h('small', label));
+function stat(value: string, label: string, art?: HTMLElement): HTMLElement {
+  return h('div.pstat', h('b', art ?? null, art ? ' ' : null, value), h('small', label));
 }
 
 function importSection(): HTMLElement {
@@ -96,7 +97,7 @@ function importSection(): HTMLElement {
         h('tr', h('th', 'Opening'), h('th', 'As'), h('th', 'G'), h('th', 'W/D/L')),
         ...r.openings
           .slice(0, 10)
-          .map((o) => h('tr', h('td', o.name), h('td', o.side === 'w' ? '⚪' : '⚫'), h('td', String(o.games)), h('td', `${o.wins}/${o.draws}/${o.losses}`))),
+          .map((o) => h('tr', h('td', o.name), h('td', o.side === 'w' ? '♔' : '♚'), h('td', String(o.games)), h('td', `${o.wins}/${o.draws}/${o.losses}`))),
       ),
     );
   }
@@ -171,7 +172,7 @@ export function renderProfile(host: HTMLElement): void {
   host.append(
     h(
       'section.panel',
-      h('div.pstats', stat(`🔥 ${currentStreak()}`, 'day streak'), stat(`${state.streak.best}`, 'best streak'), stat(`${state.xp}`, 'total XP')),
+      h('div.pstats', stat(String(currentStreak()), 'day streak', icon('flame')), stat(`${state.streak.best}`, 'best streak'), stat(`${state.xp}`, 'total XP')),
       h('div.pstats', stat(`${lessonsDone}/${LESSONS.length}`, 'lessons'), stat(String(cards), 'patterns learned'), stat(`${state.profile.goal}`, 'XP goal')),
       h('h4', 'This week'),
       weekChart(),

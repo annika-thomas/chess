@@ -65,4 +65,4 @@ npm run build    # production build in dist/
 
 Pushing to `main` runs the tests and deploys to GitHub Pages.
 
-Licensed GPL-3.0-or-later (chessground and the cburnett pieces are GPL).
+Licensed GPL-3.0-or-later (chessground and the cburnett pieces are GPL). Icons are drawn from [Lucide](https://lucide.dev) (ISC), restyled in brass and cream, plus the cburnett rook for boss battles.

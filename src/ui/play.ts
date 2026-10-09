@@ -14,6 +14,7 @@ import { topBar } from './learn';
 import { masterCards } from './guess';
 import { movesViewer } from './repertoire';
 import { sound } from './sound';
+import { icon, type IconName } from './icons';
 
 const SPEED_LABEL: Record<string, string> = {
   bullet: 'Bullet',
@@ -74,7 +75,7 @@ function setupPanel(): HTMLElement {
   const rec = recommendedLevel();
   let level = levelById(cfg.level);
   const sideBtns = (['w', 'b', 'random'] as const).map((s) => {
-    const b = h(`button.seg${cfg.side === s ? '.on' : ''}`, { type: 'button' }, s === 'w' ? '♔ White' : s === 'b' ? '♚ Black' : '⚄ Random');
+    const b = h(`button.seg${cfg.side === s ? '.on' : ''}`, { type: 'button' }, ...(s === 'w' ? ['♔ White'] : s === 'b' ? ['♚ Black'] : [icon('shuffle'), ' Random']));
     b.addEventListener('click', () => {
       cfg.side = s;
       sideBtns.forEach((x, i) => x.classList.toggle('on', (['w', 'b', 'random'] as const)[i] === s));
@@ -164,7 +165,7 @@ function reviewGame(g: PlayedGame): void {
     const entry = book.get(fenKey(chess.fen()));
     chess.move(san);
     const info = entry ? [...entry.moves.entries()].find(([m]) => sameSan(m, san))?.[1] : undefined;
-    return info ? `📖 ${info.note || 'Book move.'}` : '';
+    return info ? `**Book move.** ${info.note}` : '';
   });
   push((el) =>
     movesViewer(el, {
@@ -214,25 +215,27 @@ function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss): 
   if (boss) board.load(startMoves);
 
   const coach = h('div.coach-strip');
+  const TONE_ICON: Record<'info' | 'good' | 'warn', IconName> = { info: 'bulb', good: 'check', warn: 'book' };
   const say = (text: string, tone: 'info' | 'good' | 'warn' = 'info') => {
     clear(coach);
     coach.className = `coach-strip ${tone}`;
-    coach.append(md(text));
+    coach.append(icon(TONE_ICON[tone], 'coach-icon'), md(text));
   };
   const status = h('span.thinking');
   const counter = h('span.thinking');
   const movesEl = h('div.game-moves');
-  const takeback = h('button.btn.ghost.small-btn', { type: 'button' }, '↶ Takeback');
-  const resign = h('button.btn.ghost.small-btn', { type: 'button' }, '⚑ Resign');
-  const close = h('button.icon-btn.close', { type: 'button', 'aria-label': 'Leave game' }, '✕');
+  const takeback = h('button.btn.ghost.small-btn', { type: 'button' }, icon('undo'), ' Takeback');
+  const resign = h('button.btn.ghost.small-btn', { type: 'button' }, icon('flag'), ' Resign');
+  const close = h('button.icon-btn.close', { type: 'button', 'aria-label': 'Leave game' }, icon('close'));
   const myName = state.profile.name || 'You';
-  const bar = (name: string, sub: string, extra?: HTMLElement) => h('div.player-bar', h('div', h('b', name), ' ', h('small.muted', sub)), extra ?? null);
+  const bar = (name: string | Array<Node | string>, sub: string, extra?: HTMLElement) =>
+    h('div.player-bar', h('div', h('b', ...(Array.isArray(name) ? name : [name])), ' ', h('small.muted', sub)), extra ?? null);
 
   root.append(
     h(
       'div.session.game',
-      h('header.run-head', close, h('div.game-title', boss ? `👑 ${boss.name}` : `${level.name} · ~${level.elo}`), h('span')),
-      bar(`🤖 ${level.name}`, `~${level.elo}`, status),
+      h('header.run-head', close, h('div.game-title', ...(boss ? [icon('rook'), ` ${boss.name}`] : [`${level.name} · ~${level.elo}`])), h('span')),
+      bar([icon('engine'), ` ${level.name}`], `~${level.elo}`, status),
       board.el,
       bar(myName, `~${state.rating.r}${isProvisional(state.rating) ? '?' : ''}`, counter),
       coach,
@@ -272,11 +275,11 @@ function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss): 
       const hit = [...entry.moves.entries()].find(([m]) => sameSan(m, san));
       if (hit) {
         lastBookLine = hit[1].line.name;
-        say(`✓ **Book move.** ${hit[1].note}`, 'good');
+        say(`**Book move.** ${hit[1].note}`, 'good');
       } else if (!deviatedNoted) {
         deviatedNoted = true;
         const [exp, info] = [...entry.moves.entries()][0];
-        say(`📖 Your repertoire plays **${exp}** here (${info.line.name}). ${info.note} Keep playing, and I’ll add it to your drills.`, 'warn');
+        say(`Your repertoire plays **${exp}** here (${info.line.name}). ${info.note} Keep playing, and I’ll add it to your drills.`, 'warn');
       }
     }
     showMoves();
@@ -400,7 +403,7 @@ function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss): 
       moves,
       rated,
       delta,
-      opening: boss ? `👑 ${boss.name}` : lastBookLine,
+      opening: boss ? `Boss: ${boss.name}` : lastBookLine,
     };
     state.games = [...state.games, game].slice(-200);
     let crown = false;
@@ -421,11 +424,11 @@ function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss): 
     const title = boss
       ? bossPassed(result)
         ? crown
-          ? 'Crown earned! 👑'
-          : 'Boss defeated again! 👑'
+          ? 'Crown earned!'
+          : 'Boss defeated again!'
         : 'The boss wins this time'
       : result === 'win'
-        ? 'You won! 🏆'
+        ? 'You won!'
         : result === 'loss'
           ? 'You lost'
           : 'Draw';
@@ -437,6 +440,7 @@ function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss): 
     const closeSheet = sheet(
       h(
         'div.result-sheet',
+        h('div.sheet-art', icon(boss ? (bossPassed(result) ? 'crown' : 'rook') : result === 'win' ? 'trophy' : result === 'draw' ? 'shield' : 'flag')),
         h('h2', title),
         h('p.muted', sub),
         rated

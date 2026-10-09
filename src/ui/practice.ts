@@ -14,6 +14,7 @@ import {
 import { state } from '../engine/store';
 import { go, startSession } from './app';
 import { h } from './dom';
+import { icon, unitIcon } from './icons';
 import type { Side } from '../types';
 import { topBar } from './learn';
 
@@ -115,7 +116,7 @@ export function renderPractice(host: HTMLElement): void {
   if (strong.length) {
     host.append(h('h4.section-title', 'Strengths'));
     for (const s of strong) {
-      host.append(h('div.row', h('div.row-main', h('b', `✓ ${s.label}`), h('small.muted', `${Math.round((1 - s.errorRate) * 100)}% correct`))));
+      host.append(h('div.row', h('div.row-main', h('b', icon('check', 'ok'), ` ${s.label}`), h('small.muted', `${Math.round((1 - s.errorRate) * 100)}% correct`))));
     }
   }
 
@@ -128,7 +129,7 @@ export function renderPractice(host: HTMLElement): void {
       host.append(
         h(
           'div.row',
-          h('div.unit-dot', { style: `background:${u.color}` }, u.icon),
+          h('div.unit-dot', { style: `background:${u.color}` }, unitIcon(u.icon)),
           h('div.row-main', h('b', u.title), h('div.meter', h('div', { style: `width:${Math.round(s! * 100)}%;background:${u.color}` }))),
           btn,
         ),

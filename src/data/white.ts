@@ -171,7 +171,7 @@ export const punish: Unit = {
   subtitle: 'Traps after 1.e4 e5 2.Nf3',
   section: SECTION,
   color: '#7b3f3f',
-  icon: '⚡',
+  icon: 'icon:bolt',
   side: 'w',
   lessons: [
     {

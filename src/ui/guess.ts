@@ -7,6 +7,7 @@ import { render, sheet } from './app';
 import { Board } from './board';
 import { clear, figHtml, h, inline, md } from './dom';
 import { sound } from './sound';
+import { icon } from './icons';
 
 const moveLabel = (ply: number, san: string) => formatMoves([...Array(ply).fill(''), san], ply);
 
@@ -32,7 +33,8 @@ export function masterCards(): HTMLElement {
         h(
           'div.row-main',
           h('b', g.title),
-          h('small.muted', `${g.white} – ${g.black}, ${g.year} · ${g.opening} · ${'★'.repeat(g.difficulty)}${'☆'.repeat(3 - g.difficulty)}`),
+          h('small.muted', `${g.white} – ${g.black}, ${g.year} · ${g.opening}`),
+          h('span.stars', ...[1, 2, 3].map((k) => icon(k <= g.difficulty ? 'star' : 'starEmpty'))),
         ),
         rec ? h('span.delta.up', `${Math.round((rec.best / rec.max) * 100)}%`) : h('span.chev', '›'),
       );
@@ -72,7 +74,7 @@ function startGuess(g: MasterGame): void {
   const bubble = h('div.bubble.guess-bubble');
   const hint = h('button.btn.ghost', { type: 'button' }, 'Hint');
   const next = h('button.btn.primary', { type: 'button' }, 'Start');
-  const close = h('button.icon-btn.close', { type: 'button', 'aria-label': 'Leave' }, '✕');
+  const close = h('button.icon-btn.close', { type: 'button', 'aria-label': 'Leave' }, icon('close'));
   root.append(
     h(
       'div.session.game',
@@ -158,7 +160,7 @@ function startGuess(g: MasterGame): void {
       matched++;
       sound.correct();
       showScore();
-      say(h('div.verdict.good', `✓ ${sameSan(san, master) ? `${short}’s move!` : 'Also wins!'} +${full}`), note(ply));
+      say(h('div.verdict.good', icon('check'), ` ${sameSan(san, master) ? `${short}’s move!` : 'Also wins!'} +${full}`), note(ply));
       if (!sameSan(san, master)) {
         // An equally good alternative (e.g. another mate): show the game move too.
         board.undo();
@@ -211,12 +213,13 @@ function startGuess(g: MasterGame): void {
     save();
     sound.finish();
     const pct = max ? Math.round((points / max) * 100) : 0;
-    const title = pct >= 85 ? 'Master-level thinking! 🏆' : pct >= 60 ? 'Strong play!' : pct >= 35 ? 'Good effort' : 'Now you know the ideas';
+    const title = pct >= 85 ? 'Master-level thinking!' : pct >= 60 ? 'Strong play!' : pct >= 35 ? 'Good effort' : 'Now you know the ideas';
     const again = h('button.btn.ghost.wide', { type: 'button' }, 'Play again');
     const done = h('button.btn.primary.wide', { type: 'button' }, 'Done');
     const closeSheet = sheet(
       h(
         'div.result-sheet',
+        h('div.sheet-art', icon(pct >= 60 ? 'trophy' : 'bulb')),
         h('h2', title),
         h('div.rating-change', h('b', `${points} / ${max}`), ` · ${pct}%`),
         h('p.muted', `You matched ${matched} of ${guesses} moves.${prev && points > prev.best ? ' New best!' : ''}`),

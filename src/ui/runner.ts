@@ -6,6 +6,7 @@ import type { ChoiceExercise, Exercise, FindExercise, InfoExercise, RecallExerci
 import { Board, pawnSkeleton } from './board';
 import { clear, figHtml, h, inline, md, shuffle } from './dom';
 import { sound } from './sound';
+import { icon } from './icons';
 
 export interface Result {
   correct: boolean;
@@ -426,7 +427,7 @@ const mountSquare =
     const updateCounter = () => {
       if (timed) {
         const left = Math.max(0, ex.seconds! - Math.floor((Date.now() - started) / 1000));
-        counter.textContent = `⏱ ${left}s · ✓ ${right}`;
+        counter.replaceChildren(icon('timer'), ` ${left}s  `, icon('check', 'ok'), ` ${right}`);
       } else counter.textContent = `${Math.min(i + 1, queue.length)} / ${queue.length}`;
     };
 
@@ -567,7 +568,7 @@ export function runSession(root: HTMLElement, opts: RunOptions): void {
 
   clear(root);
   const bar = h('div.progress', h('div.fill'));
-  const close = h('button.icon-btn.close', { 'aria-label': 'Quit', type: 'button' }, '✕');
+  const close = h('button.icon-btn.close', { 'aria-label': 'Quit', type: 'button' }, icon('close'));
   const comboEl = h('div.combo');
   const header = h('header.run-head', close, bar, comboEl);
   const stage = h('main.stage');
@@ -610,7 +611,7 @@ export function runSession(root: HTMLElement, opts: RunOptions): void {
         queue.push({ ...slot, retry: true });
       }
       combo = r.correct ? combo + 1 : 0;
-      comboEl.textContent = combo >= 3 ? `🔥 ${combo}` : '';
+      comboEl.replaceChildren(...(combo >= 3 ? [icon('flame'), ` ${combo}`] : []));
       (r.correct ? sound.correct : sound.wrong)();
       sheet.className = `sheet ${r.correct ? 'ok' : 'bad'}`;
       fbTitle.textContent = r.correct ? (r.title === 'Correct!' ? PRAISE[Math.floor(Math.random() * PRAISE.length)] : r.title ?? '') : r.title ?? 'Not quite';
@@ -699,10 +700,10 @@ function showSummary(root: HTMLElement, s: Summary): void {
   root.append(
     h(
       'div.summary',
-      h('div.trophy', s.perfect ? '🏆' : '♞'),
+      h('div.trophy', s.perfect ? icon('trophy') : '♞'),
       h('h1', s.perfect ? 'Flawless!' : s.title),
-      s.streakUp ? h('p.streak-up', `🔥 ${s.streak} day streak!`) : null,
-      s.goalHit ? h('p.goal-hit', '🎯 Daily goal reached') : null,
+      s.streakUp ? h('p.streak-up', icon('flame'), ` ${s.streak} day streak!`) : null,
+      s.goalHit ? h('p.goal-hit', icon('target'), ' Daily goal reached') : null,
       h('div.stats', stat('XP', `+${s.xp}`, 'xp'), stat('Accuracy', `${s.accuracy}%`, 'acc'), stat('Time', time, 'time')),
       btn,
     ),

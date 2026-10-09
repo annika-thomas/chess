@@ -6,6 +6,7 @@ import { bossFor, type Boss } from '../data/bosses';
 import { sheet, startSession } from './app';
 import { recommendedLevel, startBoss } from './play';
 import { h, md } from './dom';
+import { icon, unitIcon } from './icons';
 
 export function lessonItems(lesson: Lesson) {
   return lesson.exercises.map((exercise, i) => ({
@@ -27,7 +28,7 @@ export function goalRing(size = 34): HTMLElement {
     title: `${xpToday()} / ${state.profile.goal} XP today`,
     html: `<svg viewBox="0 0 36 36" width="${size}" height="${size}"><circle cx="18" cy="18" r="${r}" class="ring-bg"/><circle cx="18" cy="18" r="${r}" class="ring-fg" stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - pct)}"/></svg>`,
   });
-  ring.append(h('span', pct >= 1 ? '✓' : String(xpToday())));
+  ring.append(pct >= 1 ? h('span', icon('check')) : h('span', String(xpToday())));
   return ring;
 }
 
@@ -36,7 +37,7 @@ export function topBar(title: string): HTMLElement {
   return h(
     'header.topbar',
     h('div.brand', title),
-    h('div.chips', h(`div.chip.streak${streak ? '' : '.cold'}`, `🔥 ${streak}`), goalRing()),
+    h('div.chips', h(`div.chip.streak${streak ? '' : '.cold'}`, icon('flame'), ` ${streak}`), goalRing()),
   );
 }
 
@@ -80,7 +81,7 @@ function bossNode(boss: Boss, unitDone: boolean, offset: number): HTMLElement {
   const node = h(
     `button.node.boss${beaten ? '.done' : ''}${unitDone && !beaten ? '.ready' : ''}${unitDone || beaten ? '' : '.locked'}`,
     { type: 'button', style: `transform:translateX(${offset}px)`, 'aria-label': `Boss: ${boss.name}` },
-    h('span.node-icon', beaten ? '👑' : '🏰'),
+    h('span.node-icon', icon(beaten ? 'crownCream' : 'rook')),
   );
   node.addEventListener('click', () => bossSheet(boss, unitDone));
   return h('div.node-wrap', node, h('div.node-label', { style: `transform:translateX(${offset}px)` }, `Boss: ${boss.name}`));
@@ -92,7 +93,7 @@ function bossSheet(boss: Boss, unitDone: boolean): void {
   const go = h('button.btn.primary.wide', { type: 'button' }, rec?.beaten ? 'Play again' : unitDone ? 'Challenge the boss' : 'Challenge anyway');
   const content = h(
     'div.lesson-sheet',
-    h('div.unit-name', { style: 'color:var(--gold)' }, rec?.beaten ? '👑 Crown earned' : '🏰 Boss battle'),
+    h('div.unit-name', { style: 'color:var(--gold)' }, icon(rec?.beaten ? 'crown' : 'rook'), rec?.beaten ? ' Crown earned' : ' Boss battle'),
     h('h2', boss.name),
     md(boss.brief),
     md(
@@ -120,7 +121,7 @@ function unitBlock(unitIndex: number): HTMLElement {
     'div.unit-banner',
     { style: `background:${unit.color}` },
     h('div', h('div.unit-kicker', `Unit ${unitIndex + 1}`), h('h3', unit.title), h('p', unit.subtitle)),
-    h('div.unit-icon', state.bosses[unit.id]?.beaten ? '👑' : unit.icon),
+    h('div.unit-icon', state.bosses[unit.id]?.beaten ? icon('crown') : unitIcon(unit.icon)),
   );
   if (strength !== undefined) {
     banner.append(
@@ -145,7 +146,7 @@ function unitBlock(unitIndex: number): HTMLElement {
     const node = h(
       `button.node${done ? '.done' : ''}${current ? '.current' : ''}${locked ? '.locked' : ''}`,
       { type: 'button', style: `--c:${unit.color};transform:translateX(${OFFSETS[i % OFFSETS.length]}px)`, 'aria-label': ref.lesson.title },
-      h('span.node-icon', done ? '★' : locked ? '🔒' : unit.icon),
+      h('span.node-icon', done ? icon('starCream') : locked ? icon('lock') : unitIcon(unit.icon)),
     );
     const wrap = h('div.node-wrap', current ? h('div.start-bubble', { style: `transform:translateX(${OFFSETS[i % OFFSETS.length]}px)` }, 'START') : null, node, h('div.node-label', { style: `transform:translateX(${OFFSETS[i % OFFSETS.length]}px)` }, ref.lesson.title));
     node.addEventListener('click', () => lessonSheet(ref));

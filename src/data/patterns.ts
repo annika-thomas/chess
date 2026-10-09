@@ -33,7 +33,7 @@ export const patternGym: Unit = {
   subtitle: 'Train your eye: structures, openings, tactics',
   section: SECTION,
   color: '#7d4a63',
-  icon: '👁',
+  icon: 'icon:eye',
   lessons: [
     {
       id: 'pat-structures',
