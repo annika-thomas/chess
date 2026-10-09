@@ -306,8 +306,6 @@ const mountChoice =
     wrap.append(opts);
     host.append(wrap);
 
-    // While the options are visible, the board shrinks to leave room for them.
-    const fit = () => wrap.style.setProperty('--n', String(options.length));
     if (ex.flash && board) {
       // Flash drills: the board stays covered until the learner has read the question and taps to start,
       // so the timer only measures looking at the position.
@@ -321,13 +319,11 @@ const mountChoice =
         ctx.button('Check', check, false);
         flashTimer = window.setTimeout(() => {
           board!.el.classList.add('veiled');
-          fit();
           opts.classList.remove('hidden');
           if (sub) sub.textContent = 'From memory:';
         }, ex.flash);
       });
     } else {
-      fit();
       ctx.button('Check', check, false);
     }
 

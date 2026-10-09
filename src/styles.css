@@ -621,8 +621,6 @@ p {
 }
 .choice > .board-wrap {
   margin-top: 4px;
-  max-width: max(200px, min(560px, calc(100dvh - 300px - var(--n, 0) * 64px - var(--safe-t) - var(--safe-b))));
-  transition: max-width 0.35s ease;
 }
 .option {
   padding: 12px 16px !important;
