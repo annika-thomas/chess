@@ -1,5 +1,6 @@
 import { newCard, review, type Card, type Grade } from './srs';
-import type { FindExercise } from '../types';
+import type { FindExercise, Side } from '../types';
+import { START, type Rating } from './rating';
 
 export interface Profile {
   name: string;
@@ -60,6 +61,30 @@ export interface ImportReport {
   outside: number;
 }
 
+/** A rating seen in imported games, e.g. Lichess blitz 1234. */
+export interface PlatformRating {
+  source: 'lichess' | 'chesscom';
+  speed: string;
+  rating: number;
+  date: string;
+}
+
+export interface PlayedGame {
+  id: string;
+  date: number;
+  side: Side;
+  level: number;
+  result: 'win' | 'draw' | 'loss';
+  /** How it ended, e.g. "checkmate", "resigned", "stalemate". */
+  reason: string;
+  moves: string[];
+  rated: boolean;
+  /** Rating change from this game, if rated. */
+  delta?: number;
+  /** Repertoire line the opening followed, if any. */
+  opening?: string;
+}
+
 export interface State {
   v: 1;
   profile: Profile;
@@ -71,6 +96,11 @@ export interface State {
   tags: Record<string, TagStat>;
   drills: Record<string, GameDrill>;
   report?: ImportReport;
+  platformRatings: PlatformRating[];
+  games: PlayedGame[];
+  rating: Rating;
+  /** Last-used Play settings. */
+  play: { level: number; side: Side | 'random'; repertoire: boolean };
   settings: { sound: boolean; haptics: boolean; showCoords: boolean };
 }
 
@@ -98,6 +128,10 @@ function fresh(): State {
     cards: {},
     tags: {},
     drills: {},
+    platformRatings: [],
+    games: [],
+    rating: { ...START },
+    play: { level: 3, side: 'w', repertoire: true },
     settings: { sound: true, haptics: true, showCoords: true },
   };
 }
@@ -108,7 +142,7 @@ function load(): State {
     if (!raw) return fresh();
     const parsed = JSON.parse(raw) as State;
     const base = fresh();
-    return { ...base, ...parsed, settings: { ...base.settings, ...parsed.settings } };
+    return { ...base, ...parsed, play: { ...base.play, ...parsed.play }, settings: { ...base.settings, ...parsed.settings } };
   } catch {
     return fresh();
   }

@@ -1,6 +1,6 @@
 import { CARDS, LESSONS } from '../data';
 import { tagLabel } from '../engine/coach';
-import { analyzeGames, fetchChessCom, fetchLichess } from '../engine/importer';
+import { analyzeGames, fetchChessCom, fetchLichess, latestRatings } from '../engine/importer';
 import { currentStreak, exportBackup, importBackup, resetAll, save, state, today } from '../engine/store';
 import { render } from './app';
 import { h } from './dom';
@@ -60,6 +60,7 @@ function importSection(): HTMLElement {
       if (source === 'lichess') state.profile.lichess = user;
       else state.profile.chesscom = user;
       state.report = report;
+      state.platformRatings = [...state.platformRatings.filter((p) => p.source !== source), ...latestRatings(games, source)];
       state.drills = Object.fromEntries(drills.map((d) => [d.id, d]));
       save();
       render();

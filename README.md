@@ -26,6 +26,13 @@ Based on research into how chess skill is acquired and how memory works:
 - **Ideas over moves** (Fine, Seirawan, Watson & Burgess): "why" questions are spaced too, not just the moves.
 - **Einstellung**: pattern-matchers sometimes play the familiar move without checking. Dedicated drills train the blunder check.
 
+## Play the computer
+
+The **Play** tab runs [Stockfish 19](https://github.com/nmrugg/stockfish.js) (lite, single-threaded WASM) on the phone, offline. There are 10 levels from ~400 to full strength. Levels 6–9 use Stockfish's calibrated `UCI_Elo` limiter. Levels 1–5 add a handicap (shallow search, choosing among decent moves, occasional blunders), so their ratings are approximate.
+
+- **Opening practice**: the computer steers into your repertoire, and a coach line says when you are in book and when either side leaves it. Your slips become drills.
+- **Rating estimate**: Glicko-1 over your results against the levels, shown with a 95% range. Ratings found in imported Lichess or Chess.com games are shown alongside it.
+
 ## Made for you
 
 - **Coach card**: picks your best next step: due reviews, then your weakest concept, then your next lesson.

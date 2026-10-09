@@ -305,16 +305,21 @@ const mountChoice =
     wrap.append(opts);
     host.append(wrap);
 
+    // While the options are visible, the board shrinks to leave room for them.
+    const fit = () => wrap.style.setProperty('--n', String(options.length));
     if (ex.flash && board) {
       const bar = h('div.flashbar', h('div', { style: `animation-duration:${ex.flash}ms` }));
       board.el.append(bar);
       opts.classList.add('hidden');
       flashTimer = window.setTimeout(() => {
         board!.el.classList.add('veiled');
+        fit();
         opts.classList.remove('hidden');
         const sub = wrap.querySelector('.sub');
         if (sub) sub.textContent = 'From memory:';
       }, ex.flash);
+    } else {
+      fit();
     }
     ctx.button('Check', check, false);
 

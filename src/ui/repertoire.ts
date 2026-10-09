@@ -28,13 +28,37 @@ export function renderRepertoire(host: HTMLElement): void {
 
 function lineViewer(host: HTMLElement, line: RepertoireLine): void {
   const { moves, notes } = parseLine(line.line);
-  let ply = moves.length;
-  const board = new Board({ orientation: line.side, viewOnly: true });
+  movesViewer(host, {
+    title: line.name,
+    side: line.side,
+    moves,
+    notes,
+    action: {
+      label: 'Drill this line',
+      run: () => startSession(line.name, [{ exercise: { type: 'recall', side: line.side, line: line.line }, tags: [] }], 'practice'),
+    },
+  });
+}
+
+export interface ViewerOpts {
+  title: string;
+  side: 'w' | 'b';
+  moves: string[];
+  notes: string[];
+  /** Ply to show first (defaults to the start). */
+  start?: number;
+  action?: { label: string; run: () => void };
+}
+
+/** Step through a sequence of moves with notes: used for repertoire lines and game review. */
+export function movesViewer(host: HTMLElement, o: ViewerOpts): void {
+  const { moves, notes } = o;
+  let ply = o.start ?? 0;
+  const board = new Board({ orientation: o.side, viewOnly: true });
   const note = h('div.bubble.viewer-note');
   const list = h('div.movelist');
-  const prev = h('button.btn.ghost', { type: 'button' }, '◀');
-  const next = h('button.btn.ghost', { type: 'button' }, '▶');
-  const drill = h('button.btn.primary', { type: 'button' }, 'Drill this line');
+  const prev = h('button.btn.ghost', { type: 'button', 'aria-label': 'Previous move' }, '◀');
+  const next = h('button.btn.ghost', { type: 'button', 'aria-label': 'Next move' }, '▶');
   const backBtn = h('button.icon-btn', { type: 'button', 'aria-label': 'Back' }, '‹');
   backBtn.addEventListener('click', () => {
     board.destroy();
@@ -65,19 +89,15 @@ function lineViewer(host: HTMLElement, line: RepertoireLine): void {
     ply = Math.min(moves.length, ply + 1);
     update();
   });
-  drill.addEventListener('click', () => {
-    board.destroy();
-    startSession(line.name, [{ exercise: { type: 'recall', side: line.side, line: line.line }, tags: [] }], 'practice');
-  });
 
-  host.append(
-    h('header.topbar', backBtn, h('div.brand.small', line.name), h('span')),
-    board.el,
-    h('div.controls', prev, next),
-    note,
-    list,
-    h('div.pad', drill),
-  );
-  ply = 0;
+  host.append(h('header.topbar', backBtn, h('div.brand.small', o.title), h('span')), board.el, h('div.controls', prev, next), note, list);
+  if (o.action) {
+    const btn = h('button.btn.primary', { type: 'button' }, o.action.label);
+    btn.addEventListener('click', () => {
+      board.destroy();
+      o.action!.run();
+    });
+    host.append(h('div.pad', btn));
+  }
   update();
 }

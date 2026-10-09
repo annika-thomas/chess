@@ -2,7 +2,7 @@ import { Chess } from 'chess.js';
 import { REPERTOIRE } from '../data';
 import type { RepertoireLine, Side } from '../types';
 import { fenKey, parseLine, sameSan, tryMove } from './notation';
-import type { GameDrill, ImportReport, OpeningStat } from './store';
+import type { GameDrill, ImportReport, OpeningStat, PlatformRating } from './store';
 
 export interface Game {
   url: string;
@@ -12,6 +12,9 @@ export interface Game {
   moves: string[];
   opening: string;
   date: string;
+  /** The learner's rating in this game and its time control, when the site reports it. */
+  myRating?: number;
+  speed?: string;
 }
 
 // ───────────── Fetching ─────────────
@@ -19,11 +22,12 @@ export interface Game {
 interface LichessGame {
   id: string;
   variant: string;
+  speed?: string;
   createdAt: number;
   winner?: 'white' | 'black';
   moves: string;
   opening?: { name: string };
-  players: { white: { user?: { name: string } }; black: { user?: { name: string } } };
+  players: { white: { user?: { name: string }; rating?: number }; black: { user?: { name: string }; rating?: number } };
 }
 
 export async function fetchLichess(username: string, max = 60): Promise<Game[]> {
@@ -50,6 +54,8 @@ export async function fetchLichess(username: string, max = 60): Promise<Game[]> 
         moves: g.moves.split(' '),
         opening: g.opening?.name ?? 'Unknown',
         date: new Date(g.createdAt).toISOString().slice(0, 10),
+        myRating: (mySide === 'w' ? g.players.white : g.players.black).rating,
+        speed: g.speed,
       } satisfies Game;
     });
 }
@@ -60,8 +66,9 @@ interface ChessComGame {
   rules: string;
   end_time: number;
   eco?: string;
-  white: { username: string; result: string };
-  black: { username: string; result: string };
+  time_class?: string;
+  white: { username: string; result: string; rating?: number };
+  black: { username: string; result: string; rating?: number };
 }
 
 const DRAWS = new Set(['agreed', 'repetition', 'stalemate', 'insufficient', '50move', 'timevsinsufficient']);
@@ -109,6 +116,8 @@ export async function fetchChessCom(username: string, max = 60): Promise<Game[]>
           moves: chess.history(),
           opening,
           date: new Date(g.end_time * 1000).toISOString().slice(0, 10),
+          myRating: mine.rating,
+          speed: g.time_class,
         },
       ];
     });
@@ -173,6 +182,37 @@ export function gradeGame(game: Game, book: Book): GameVerdict {
   return { kind: 'followed', plies: game.moves.length };
 }
 
+/** Turn a deviation into a "what does your repertoire play here?" drill. */
+export function makeDrill(g: Game, v: Extract<GameVerdict, { kind: 'deviated' }>): GameDrill {
+  const setup = g.moves.slice(0, v.ply).join(' ');
+  return {
+    type: 'find',
+    id: hash(setup + '|' + v.played),
+    side: g.mySide,
+    setup,
+    solution: [v.expected[0]],
+    accept: v.expected.slice(1),
+    prompt: `In your game vs ${g.opponent} you played ${moveLabel(v.ply, v.played)}. What does your repertoire play here?`,
+    explain: `${moveLabel(v.ply, v.expected[0])}: ${v.note}`,
+    tags: ['from-games'],
+    gameUrl: g.url,
+    played: v.played,
+    opponent: g.opponent,
+    date: g.date,
+  };
+}
+
+/** Latest rating per site and time control. */
+export function latestRatings(games: Game[], source: PlatformRating['source']): PlatformRating[] {
+  const out = new Map<string, PlatformRating>();
+  for (const g of games) {
+    if (!g.myRating || !g.speed) continue;
+    const prev = out.get(g.speed);
+    if (!prev || g.date > prev.date) out.set(g.speed, { source, speed: g.speed, rating: g.myRating, date: g.date });
+  }
+  return [...out.values()];
+}
+
 function moveLabel(ply: number, san: string): string {
   const n = Math.floor(ply / 2) + 1;
   return ply % 2 === 0 ? `${n}.${san}` : `${n}...${san}`;
@@ -215,26 +255,8 @@ export function analyzeGames(games: Game[], source: ImportReport['source'], user
     else if (v.kind === 'outside') report.outside++;
     else {
       report.deviated++;
-      const setup = g.moves.slice(0, v.ply).join(' ');
-      const id = fenKey(new Chess().fen()) + '|' + setup + '|' + v.played;
-      const drillId = hash(id);
-      if (!drills.has(drillId)) {
-        drills.set(drillId, {
-          type: 'find',
-          id: drillId,
-          side: g.mySide,
-          setup,
-          solution: [v.expected[0]],
-          accept: v.expected.slice(1),
-          prompt: `In your game vs ${g.opponent} you played ${moveLabel(v.ply, v.played)}. What does your repertoire play here?`,
-          explain: `${moveLabel(v.ply, v.expected[0])}: ${v.note}`,
-          tags: ['from-games'],
-          gameUrl: g.url,
-          played: v.played,
-          opponent: g.opponent,
-          date: g.date,
-        });
-      }
+      const drill = makeDrill(g, v);
+      if (!drills.has(drill.id)) drills.set(drill.id, drill);
     }
   }
   report.openings = [...stats.values()].sort((a, b) => b.games - a.games);

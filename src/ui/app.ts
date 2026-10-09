@@ -2,7 +2,7 @@ import type { Item } from '../engine/coach';
 import { h, clear } from './dom';
 import { runSession } from './runner';
 
-export type Tab = 'learn' | 'practice' | 'repertoire' | 'profile';
+export type Tab = 'learn' | 'practice' | 'play' | 'repertoire' | 'profile';
 
 type Render = (host: HTMLElement) => void;
 
@@ -17,6 +17,7 @@ const svg = (body: string) =>
 const TAB_META: Array<[Tab, string, string]> = [
   ['learn', 'Learn', '<span class="glyph">♞</span>'],
   ['practice', 'Practice', svg('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/>')],
+  ['play', 'Play', svg('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>')],
   ['repertoire', 'Repertoire', svg('<path d="M4 5.5C4 4.7 4.7 4 5.5 4H11v16H5.5C4.7 20 4 19.3 4 18.5z"/><path d="M20 5.5c0-.8-.7-1.5-1.5-1.5H13v16h5.5c.8 0 1.5-.7 1.5-1.5z"/>')],
   ['profile', 'Me', svg('<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>')],
 ];

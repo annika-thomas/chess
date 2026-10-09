@@ -25,7 +25,11 @@ export default defineConfig({
           { src: 'icons/icon-512.png?v=c2', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
-      workbox: { globPatterns: ['**/*.{js,css,html,svg,png,jpg}'] },
+      workbox: {
+        // The chess engine (~1.8 MB of WASM) is precached too, so games work offline.
+        globPatterns: ['**/*.{js,css,html,svg,png,jpg,wasm}'],
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+      },
     }),
   ],
   test: { environment: 'node' },
