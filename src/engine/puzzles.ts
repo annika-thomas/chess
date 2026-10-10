@@ -17,6 +17,8 @@ export interface PuzzleSet {
   title: string;
   /** One line about what the set trains. */
   about: string;
+  /** A follow-up set: opens once this set is passed. */
+  after?: string;
   puzzles: Puzzle[];
 }
 

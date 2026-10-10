@@ -54,7 +54,7 @@ root.textContent = '';
 // Load the puzzle library; mastery gates switch on once the sets are known.
 loadSets()
   .then((sets) => {
-    setAvailableSets(sets.keys());
+    setAvailableSets(sets.keys(), [...sets.values()].flatMap((s) => (s.after ? [[s.id, s.after] as [string, string]] : [])));
     if (state.profile.onboarded) render();
   })
   .catch(() => undefined);

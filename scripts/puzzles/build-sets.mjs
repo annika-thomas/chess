@@ -42,8 +42,9 @@ function hash(s) {
 
 /** Candidates per set: a bounded, hash-ordered sample spread across the rating band. */
 const BUCKETS = 10;
-const PER_BUCKET = 80;
-const pools = new Map(SETS.map((s) => [s.id, Array.from({ length: BUCKETS }, () => [])]));
+/** Keep a few times more candidates than needed, so sets can skip puzzles used elsewhere. */
+const capacity = (size) => Math.max(80, Math.ceil((size * 3) / BUCKETS));
+const pools = new Map(SETS.map((s) => [s.id, Array.from({ length: BUCKETS }, () => ({ items: [], worst: -1 }))]));
 let rows = 0;
 let kept = 0;
 
@@ -60,12 +61,20 @@ function consider(line) {
     const b = Math.min(BUCKETS - 1, Math.floor(((r - set.rating[0]) / (set.rating[1] - set.rating[0] + 1)) * BUCKETS));
     const bucket = pools.get(set.id)[b];
     const entry = { key: hash(id + set.id), id, fen, moves, r, tags };
-    if (bucket.length < PER_BUCKET) bucket.push(entry);
-    else {
-      // Keep the PER_BUCKET smallest hashes: an unbiased, reproducible sample.
-      let worst = 0;
-      for (let k = 1; k < bucket.length; k++) if (bucket[k].key > bucket[worst].key) worst = k;
-      if (entry.key < bucket[worst].key) bucket[worst] = entry;
+    const items = bucket.items;
+    if (items.length < capacity(set.size)) {
+      items.push(entry);
+      bucket.worst = -1;
+    } else {
+      // Keep the smallest hashes: an unbiased, reproducible sample. The largest is cached until replaced.
+      if (bucket.worst < 0) {
+        bucket.worst = 0;
+        for (let k = 1; k < items.length; k++) if (items[k].key > items[bucket.worst].key) bucket.worst = k;
+      }
+      if (entry.key < items[bucket.worst].key) {
+        items[bucket.worst] = entry;
+        bucket.worst = -1;
+      }
     }
   }
 }
@@ -100,7 +109,7 @@ stream.on('end', () => {
     // Take evenly from each rating bucket, skipping puzzles already used in another set.
     const per = Math.ceil(def.size / BUCKETS);
     const chosen = [];
-    for (const b of buckets) {
+    for (const { items: b } of buckets) {
       b.sort((x, y) => x.key - y.key);
       let n = 0;
       for (const e of b) {
@@ -113,7 +122,7 @@ stream.on('end', () => {
     }
     chosen.sort((a, b) => a.r - b.r);
     kept += chosen.length;
-    sets.push({ id: def.id, title: def.title, about: def.about, puzzles: chosen.map(toPuzzle) });
+    sets.push({ id: def.id, title: def.title, about: def.about, ...(def.after ? { after: def.after } : {}), puzzles: chosen.map(toPuzzle) });
     console.log(`${def.id.padEnd(14)} ${String(chosen.length).padStart(3)} / ${def.size}`);
   }
   console.log(`scanned ${rows} puzzles in ${((Date.now() - t0) / 1000).toFixed(0)}s, kept ${kept}`);
