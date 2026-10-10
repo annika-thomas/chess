@@ -31,7 +31,8 @@ done
 step "Checking the download"
 size=$(stat -c %s "$FILE")
 magic=$(head -c 4 "$FILE" | od -An -tx1 | tr -d ' \n')
-if [ "$magic" != "28b52ffd" ]; then
+# A zstd frame (28b52ffd) or a skippable frame (5X2a4d18), which the Lichess file starts with.
+if [ "$magic" != "28b52ffd" ] && ! [[ "$magic" =~ ^5[0-9a-f]2a4d18$ ]]; then
   echo "Not a zstd file (got magic '$magic'). Probably an error page; deleting it. Re-run to try again." >&2
   rm -f "$FILE"
   exit 1
