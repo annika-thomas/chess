@@ -112,3 +112,13 @@ describe('mistake flagging', () => {
     expect(isMistake({ loss: 600, best: 'e2e4', before: 1500, after: 900 })).toBe(false);
   });
 });
+
+describe('follow-up puzzle sets', () => {
+  it('open only after the first set of the theme is passed', async () => {
+    const { setUnlocked } = await import('../src/engine/levels');
+    setAvailableSets(['pin', 'pin-2'], [['pin-2', 'pin']]);
+    expect(setUnlocked('pin-2')).toBe(false);
+    state.sets.pin = { attempts: 1, bestAccuracy: 0.8, mastered: true, fluentRuns: 0, lastAt: 1, lastAccuracy: 0.8 };
+    expect(setUnlocked('pin-2')).toBe(true);
+  });
+});

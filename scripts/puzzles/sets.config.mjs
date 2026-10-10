@@ -22,5 +22,18 @@ export const SETS = [
   { id: 'level2-test', title: 'Level 2 test', about: 'Mixed: everything so far. No hints.', any: ['pin', 'skewer', 'discoveredAttack', 'doubleCheck', 'capturingDefender', 'mateIn2', 'fork'], rating: [700, 1300], size: 30, test: true },
   { id: 'mix-2', title: 'Mix 2', about: 'Unlabelled review of Level 2.', any: ['pin', 'skewer', 'discoveredAttack', 'doubleCheck', 'capturingDefender', 'mateIn2', 'fork', 'hangingPiece'], rating: [700, 1400], size: 60, test: true },
   // Ongoing
-  { id: 'daily', title: 'Daily puzzles', about: 'A mixed pool for homework.', any: [], rating: [500, 1400], size: 300, test: true },
+  // Second sets: unlock once the first set of the theme is passed, for when the first is fluent.
+  { id: 'hanging-2', after: 'hanging', title: 'Free pieces II', about: 'More free material, a little harder to spot.', any: ['hangingPiece'], rating: [700, 1300], size: 25 },
+  { id: 'mate1-2', after: 'mate1', title: 'Mate in one II', about: 'Harder one-move mates.', any: ['mateIn1'], rating: [800, 1400], size: 25 },
+  { id: 'backrank-2', after: 'backrank', title: 'Back-rank mates II', about: 'Back-rank ideas, a step harder.', any: ['backRankMate'], rating: [900, 1500], size: 25 },
+  { id: 'fork-3', after: 'fork-2', title: 'Forks III', about: 'Forks that need a forcing move first.', any: ['fork'], rating: [1100, 1500], size: 25 },
+  { id: 'pin-2', after: 'pin', title: 'Pins II', about: 'Harder pins.', any: ['pin'], rating: [900, 1500], size: 25 },
+  { id: 'skewer-2', after: 'skewer', title: 'Skewers II', about: 'Harder skewers.', any: ['skewer'], rating: [900, 1500], size: 25 },
+  { id: 'discovered-2', after: 'discovered', title: 'Discovered attacks II', about: 'Harder discoveries.', any: ['discoveredAttack'], rating: [900, 1500], size: 25 },
+  { id: 'double-check-2', after: 'double-check', title: 'Double checks II', about: 'Harder double checks.', any: ['doubleCheck'], rating: [1000, 1600], size: 25 },
+  { id: 'defender-2', after: 'defender', title: 'Removing the defender II', about: 'Harder defender removal.', any: ['capturingDefender'], rating: [1000, 1600], size: 25 },
+  { id: 'mate2-2', after: 'mate2', title: 'Mate in two II', about: 'Harder two-move mates.', any: ['mateIn2'], rating: [1000, 1600], size: 25 },
+  { id: 'f7-2', after: 'f7', title: 'Attacking f7 and f2 II', about: 'Harder attacks on the weak squares.', any: ['attackingF2F7'], rating: [1000, 1600], size: 25 },
+  // Daily pool: 10 a day, so 3,000 lasts about ten months before repeating.
+  { id: 'daily', title: 'Daily puzzles', about: 'A mixed pool for homework.', any: [], rating: [500, 1500], size: 3000, test: true },
 ];

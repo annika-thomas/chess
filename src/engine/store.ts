@@ -98,6 +98,18 @@ export interface Annotation {
   at: number;
 }
 
+/** A puzzle-set run paused part-way, so it can be finished later. */
+export interface SavedRun {
+  mode: string;
+  /** Puzzle ids in the order they were being played. */
+  queue: string[];
+  index: number;
+  correct: number;
+  seconds: number;
+  missed: string[];
+  savedAt: number;
+}
+
 /** Today's homework: what was assigned, and what's been done. */
 export interface Homework {
   day: string;
@@ -145,6 +157,8 @@ export interface State {
   /** Boss battles by unit id. */
   bosses: Record<string, { beaten: boolean; attempts: number; beatenAt?: number }>;
   homework: Homework;
+  /** Paused puzzle-set runs by set id. */
+  runs: Record<string, SavedRun>;
 }
 
 const KEY = 'chess-mentor.v1';
@@ -181,6 +195,7 @@ function fresh(): State {
     sets: {},
     bosses: {},
     homework: { day: '', plan: [], done: [] },
+    runs: {},
   };
 }
 

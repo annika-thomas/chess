@@ -10,8 +10,11 @@ import { state } from './store';
 /** Sets present in the loaded puzzle file. Until it loads (or if a set is missing), its gate is skipped. */
 let available = new Set<string>();
 let loaded = false;
-export function setAvailableSets(ids: Iterable<string>): void {
+/** Follow-up sets and the set that must be passed first. */
+let prereqs = new Map<string, string>();
+export function setAvailableSets(ids: Iterable<string>, after: Iterable<[string, string]> = []): void {
   available = new Set(ids);
+  prereqs = new Map(after);
   loaded = true;
 }
 /** Whether the puzzle file has loaded (plans that depend on it shouldn't be fixed before then). */
@@ -72,6 +75,8 @@ export function currentStep(): { ref: LessonRef; needs: 'lesson' | 'practice' } 
 /** Whether a puzzle set can be opened yet. */
 export function setUnlocked(setId: string): boolean {
   if (setId === 'daily') return true;
+  const first = prereqs.get(setId);
+  if (first) return !!state.sets[first]?.mastered;
   const owner = LESSONS.find((l) => l.lesson.practice === setId);
   if (owner) return lessonUnlocked(owner);
   const lvl = LEVELS.findIndex((l) => l.test === setId);

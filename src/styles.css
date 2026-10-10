@@ -2178,3 +2178,36 @@ cg-board square.mentor-target {
 .result-sheet .hw-list {
   text-align: left;
 }
+
+/* ── Puzzle-set pause ── */
+.run-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pause-btn .icon {
+  width: 22px;
+  height: 22px;
+}
+.pause-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px calc(24px + var(--safe-b));
+  background: #181715;
+}
+.pause-card {
+  width: 100%;
+  max-width: 420px;
+  text-align: center;
+}
+.pause-card h2 {
+  font-family: var(--serif);
+  font-size: 28px;
+  margin: 8px 0 4px;
+}
+.pause-card .stack {
+  margin-top: 20px;
+}

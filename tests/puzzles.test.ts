@@ -23,7 +23,7 @@ describe('puzzle sets', () => {
         }
         // Learner moves first and last: the solution has an odd number of moves.
         expect(p.moves.length % 2, p.id).toBe(1);
-        if (p.themes.includes('mateIn1')) expect(c.isCheckmate(), p.id).toBe(true);
+        if (p.themes.includes('mate')) expect(c.isCheckmate(), p.id).toBe(true);
       }
     });
   }

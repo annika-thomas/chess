@@ -80,6 +80,7 @@ npm run build    # production build in dist/
 - `src/data/lines.ts`: annotated repertoire lines in PGN-like notation: `1.e4 {why} e5 2.Nf3 {why} …`
 - `src/data/*.ts`: units and lessons (exercise types: `info`, `walk`, `recall`, `find`, `choice`, `square`, `endgame`)
 - `scripts/puzzles/`: builds `public/puzzles/sets.json` from the Lichess puzzle file (`--lichess <file.csv.zst>`)
+  - `bash scripts/puzzles/refresh-from-lichess.sh --push` downloads the database, rebuilds the sets, runs every test and commits (needs network access to database.lichess.org)
 - `src/engine/`: FSRS scheduler, store, coach/personalization, levels and gates, homework plan, game importer
 - `src/ui/`: screens; the board is [chessground](https://github.com/lichess-org/chessground) and the rules are [chess.js](https://github.com/jhlywa/chess.js)
 

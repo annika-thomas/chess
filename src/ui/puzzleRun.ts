@@ -1,7 +1,7 @@
 import { Chess } from 'chess.js';
 import type { Key } from '@lichess-org/chessground/types';
 import { accuracy, avgSeconds, FLUENT, isFluent, PASS, type Puzzle, type PuzzleSet, type SetRun } from '../engine/puzzles';
-import { addXp, markHomework, save, state } from '../engine/store';
+import { addXp, markHomework, save, state, type SavedRun } from '../engine/store';
 import type { Side } from '../types';
 import { render, sheet } from './app';
 import { Board } from './board';
@@ -18,6 +18,8 @@ export interface SetOpts {
   only?: Puzzle[];
   /** What "Run again" runs after a retry (the batch the retry came from). */
   full?: Puzzle[];
+  /** Continue a run that was paused and saved. */
+  resume?: SavedRun;
   /** Show the theme name as a hint (off for tests and mixed sets). */
   hint?: string;
   onFinish?: (run: SetRun, passed: boolean) => void;
@@ -36,24 +38,59 @@ function shuffled<T>(a: T[]): T[] {
 
 /** Run a set of puzzles full-screen. Your first wrong move fails a puzzle; the solution is then shown. */
 export function runPuzzleSet(o: SetOpts): void {
+  const saved = state.runs[o.set.id];
+  if (saved && !o.resume && o.mode !== 'retry') {
+    // A run of this set was paused earlier: offer to pick it up.
+    const left = saved.queue.length - saved.index;
+    const resume = h('button.btn.primary.wide', { type: 'button' }, `Resume: ${left} puzzle${left === 1 ? '' : 's'} left`);
+    const fresh = h('button.btn.ghost.wide', { type: 'button' }, 'Start over');
+    const closeSheet = sheet(
+      h(
+        'div.result-sheet',
+        h('div.sheet-art', icon('pause')),
+        h('h2', 'Pick up where you left off?'),
+        h('p.muted', `${saved.index} of ${saved.queue.length} done · ${saved.correct} correct so far`),
+        h('div.stack', resume, fresh),
+      ),
+    );
+    resume.addEventListener('click', () => {
+      closeSheet();
+      runPuzzleSet({ ...o, resume: saved });
+    });
+    fresh.addEventListener('click', () => {
+      closeSheet();
+      delete state.runs[o.set.id];
+      save();
+      runPuzzleSet(o);
+    });
+    return;
+  }
+
   const root = document.getElementById('app')!;
   clear(root);
   document.body.classList.add('locked');
+  const byId = new Map(o.set.puzzles.map((p) => [p.id, p]));
+  const fromIds = (ids: string[]) => ids.map((id) => byId.get(id)).filter((p): p is Puzzle => !!p);
   // Tests and cycles shuffle so position order can't be memorized; practice keeps the easy-to-hard order.
-  const queue = o.only ?? (o.mode === 'practice' ? o.set.puzzles.slice() : shuffled(o.set.puzzles));
-  let i = 0;
-  let correct = 0;
-  let seconds = 0;
+  const queue = o.resume ? fromIds(o.resume.queue) : (o.only ?? (o.mode === 'practice' ? o.set.puzzles.slice() : shuffled(o.set.puzzles)));
+  let i = o.resume?.index ?? 0;
+  let correct = o.resume?.correct ?? 0;
+  let seconds = o.resume?.seconds ?? 0;
   let started = 0;
   let j = 0;
   let failed = false;
   let busy = false;
+  /** The current puzzle has been scored (solved or failed). */
+  let resolved = false;
+  let paused = false;
+  let pausedAt = 0;
   let timer: number | undefined;
-  const missed: Puzzle[] = [];
+  const missed: Puzzle[] = o.resume ? fromIds(o.resume.missed) : [];
 
   const board = new Board({ orientation: 'w', onMove: (_, move) => onMove(uciOf(move)) });
   const counter = h('div.guess-score');
   const close = h('button.icon-btn.close', { type: 'button', 'aria-label': 'Leave' }, icon('close'));
+  const pauseBtn = h('button.icon-btn.pause-btn', { type: 'button', 'aria-label': 'Pause' }, icon('pause'));
   const title = h('div.game-title', o.set.title);
   const turn = h('div.puzzle-turn');
   const feedback = h('div.puzzle-feedback');
@@ -62,7 +99,7 @@ export function runPuzzleSet(o: SetOpts): void {
   root.append(
     h(
       'div.session.game.puzzles',
-      h('header.run-head', close, title, counter),
+      h('header.run-head', close, title, h('div.run-right', counter, pauseBtn)),
       h('div.progress.puzzle-progress', h('div.fill')),
       turn,
       board.el,
@@ -82,6 +119,7 @@ export function runPuzzleSet(o: SetOpts): void {
     j = 0;
     failed = false;
     busy = false;
+    resolved = false;
     next.hidden = true;
     clear(feedback);
     const side = new Chess(p.fen).turn() as Side;
@@ -124,6 +162,7 @@ export function runPuzzleSet(o: SetOpts): void {
     }
     // Wrong: the puzzle is failed. Show the solution from here.
     failed = true;
+    resolved = true;
     seconds += (Date.now() - started) / 1000;
     missed.push(p);
     sound.wrong();
@@ -163,6 +202,7 @@ export function runPuzzleSet(o: SetOpts): void {
     const t = (Date.now() - started) / 1000;
     seconds += t;
     correct++;
+    resolved = true;
     board.setInteractive(false);
     sound.correct();
     feedback.replaceChildren(h('div.verdict.good', icon('check'), ` Solved in ${t.toFixed(1)}s`));
@@ -179,6 +219,8 @@ export function runPuzzleSet(o: SetOpts): void {
   next.addEventListener('click', advance);
 
   function finish(): void {
+    document.removeEventListener('visibilitychange', onHide);
+    if (o.mode !== 'retry') delete state.runs[o.set.id];
     progress();
     board.setInteractive(false);
     const run: SetRun = { correct, total: queue.length, seconds };
@@ -258,12 +300,72 @@ export function runPuzzleSet(o: SetOpts): void {
     });
   }
 
-  close.addEventListener('click', () => {
-    if (i > 0 && i < queue.length && !confirm('Leave this set? This run won’t be saved.')) return;
+  // ── Pause: stops the clock and hides the board; the run can be saved and finished later. ──
+  const canSave = o.mode !== 'retry';
+  function saveRun(): void {
+    if (!canSave) return;
+    state.runs[o.set.id] = {
+      mode: o.mode,
+      queue: queue.map((p) => p.id),
+      // A puzzle already scored counts as done; one in progress is replayed from the start.
+      index: resolved ? i + 1 : i,
+      correct,
+      seconds,
+      missed: missed.map((p) => p.id),
+      savedAt: Date.now(),
+    };
+    save();
+  }
+  function exit(): void {
+    document.removeEventListener('visibilitychange', onHide);
+    overlay.remove();
     clearTimeout(timer);
     board.destroy();
     document.body.classList.remove('locked');
     render();
+  }
+  const resumeBtn = h('button.btn.primary.wide', { type: 'button' }, icon('play'), ' Resume');
+  const saveBtn = h('button.btn.ghost.wide', { type: 'button' }, 'Save and finish later');
+  const quitBtn = h('button.btn.ghost.wide', { type: 'button' }, 'Quit without saving');
+  const pauseInfo = h('p.muted');
+  const overlay = h('div.pause-overlay', h('div.pause-card', h('div.sheet-art', icon('pause')), h('h2', 'Paused'), pauseInfo, h('p.muted', 'The clock is stopped and the board is hidden.'), h('div.stack', resumeBtn, canSave ? saveBtn : null, quitBtn)));
+  function pause(): void {
+    if (paused || i >= queue.length) return;
+    paused = true;
+    pausedAt = Date.now();
+    pauseInfo.textContent = `${i + (resolved ? 1 : 0)} of ${queue.length} done · ${correct} correct`;
+    root.append(overlay);
+  }
+  function resume(): void {
+    if (!paused) return;
+    paused = false;
+    // Time spent paused doesn't count toward the puzzle (one that appeared during the pause starts now).
+    started = started > pausedAt ? Date.now() : started + (Date.now() - pausedAt);
+    overlay.remove();
+  }
+  /** Leaving the app (a call, switching apps) pauses and saves, so nothing is lost. */
+  function onHide(): void {
+    if (document.visibilityState !== 'hidden' || i >= queue.length) return;
+    pause();
+    saveRun();
+  }
+  document.addEventListener('visibilitychange', onHide);
+  pauseBtn.addEventListener('click', pause);
+  resumeBtn.addEventListener('click', resume);
+  saveBtn.addEventListener('click', () => {
+    saveRun();
+    exit();
+  });
+  quitBtn.addEventListener('click', () => {
+    if (canSave) {
+      delete state.runs[o.set.id];
+      save();
+    }
+    exit();
+  });
+  close.addEventListener('click', () => {
+    if (i === 0 && !resolved) return exit();
+    pause();
   });
 
   show();
