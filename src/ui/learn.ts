@@ -73,6 +73,12 @@ export function openSet(setId: string): void {
 }
 
 function setStatus(setId: string): string {
+  const run = state.runs[setId];
+  const paused = run ? ` · paused at #${run.index + 1}` : '';
+  return baseStatus(setId) + paused;
+}
+
+function baseStatus(setId: string): string {
   const rec = state.sets[setId];
   if (!rec) return `Pass at ${Math.round(PASS * 100)}% to unlock the next lesson`;
   if (rec.mastered) return `Passed · best ${Math.round(rec.bestAccuracy * 100)}%${rec.fluentRuns ? ` · fluent ×${rec.fluentRuns}` : ''}`;

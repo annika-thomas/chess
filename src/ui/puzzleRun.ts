@@ -41,15 +41,14 @@ export function runPuzzleSet(o: SetOpts): void {
   const saved = state.runs[o.set.id];
   if (saved && !o.resume && o.mode !== 'retry') {
     // A run of this set was paused earlier: offer to pick it up.
-    const left = saved.queue.length - saved.index;
-    const resume = h('button.btn.primary.wide', { type: 'button' }, `Resume: ${left} puzzle${left === 1 ? '' : 's'} left`);
-    const fresh = h('button.btn.ghost.wide', { type: 'button' }, 'Start over');
+    const resume = h('button.btn.primary.wide', { type: 'button' }, `Continue from #${saved.index + 1}`);
+    const fresh = h('button.btn.ghost.wide', { type: 'button' }, 'Start over from #1');
     const closeSheet = sheet(
       h(
         'div.result-sheet',
         h('div.sheet-art', icon('pause')),
-        h('h2', 'Pick up where you left off?'),
-        h('p.muted', `${saved.index} of ${saved.queue.length} done · ${saved.correct} correct so far`),
+        h('h2', 'You paused this set'),
+        h('p.muted', `${saved.index} of ${saved.queue.length} done · ${saved.correct} correct so far. Continue that run, or start a fresh one?`),
         h('div.stack', resume, fresh),
       ),
     );
@@ -288,11 +287,12 @@ export function runPuzzleSet(o: SetOpts): void {
     retry.addEventListener('click', () => {
       const m = missed.slice();
       leave();
-      runPuzzleSet({ ...o, mode: 'retry', only: m, full: o.mode === 'retry' ? o.full : o.only });
+      runPuzzleSet({ ...o, mode: 'retry', only: m, full: o.mode === 'retry' ? o.full : o.only, resume: undefined });
     });
     again.addEventListener('click', () => {
       leave();
-      runPuzzleSet({ ...o, mode: o.mode === 'retry' ? 'practice' : o.mode, only: o.mode === 'retry' ? o.full : o.only, full: undefined });
+      // A fresh run from #1: never carry over the position of a resumed run.
+      runPuzzleSet({ ...o, mode: o.mode === 'retry' ? 'practice' : o.mode, only: o.mode === 'retry' ? o.full : o.only, full: undefined, resume: undefined });
     });
     done.addEventListener('click', () => {
       leave();
