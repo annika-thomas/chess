@@ -1,7 +1,7 @@
 import { CARDS, LESSONS, cardRef, lessonRef, type CardRef, type LessonRef } from '../data';
 import type { Exercise } from '../types';
 import { isDue, retrievability } from './srs';
-import { currentStep, lessonUnlocked } from './levels';
+import { currentStep, lessonUnlocked, repertoireOpen } from './levels';
 import { LEVELS } from '../data';
 import { currentStreak, NEW_PER_DAY, newLessonsToday, state, xpToday } from './store';
 
@@ -67,6 +67,8 @@ export function dueCards(now = Date.now()): CardRef[] {
 }
 
 export function gameDrillsDue(now = Date.now()): string[] {
+  // Opening drills from your games wait until the repertoire is taught (Level 3).
+  if (!repertoireOpen()) return [];
   return Object.keys(state.drills).filter((id) => {
     const card = state.cards[`game:${id}`];
     return !card || isDue(card, now);
@@ -216,7 +218,7 @@ export function gameBasedPriority(): { lesson: LessonRef; opening: string; games
   for (const o of [...report.openings].sort((a, b) => b.games - a.games)) {
     const id = lessonForOpening(o.name);
     const ref = id ? lessonRef(id) : undefined;
-    if (ref && !isLessonDone(id!) && o.games >= 2) return { lesson: ref, opening: o.name, games: o.games };
+    if (ref && !isLessonDone(id!) && lessonUnlocked(ref) && o.games >= 2) return { lesson: ref, opening: o.name, games: o.games };
   }
   return undefined;
 }

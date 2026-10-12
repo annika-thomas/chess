@@ -1,6 +1,7 @@
 import { Chess } from 'chess.js';
 import { botMove, engine, evaluate, isMistake, judgeMove, lossLabel, LEVELS, levelById, type Level } from '../engine/bot';
 import { annotatable, weekStart } from '../engine/homework';
+import { repertoireOpen } from '../engine/levels';
 import { annotateGame, uciToSan } from './annotate';
 import type { Boss } from '../data/bosses';
 import { formatMoves, parseLine } from '../engine/notation';
@@ -113,6 +114,24 @@ function setupPanel(): HTMLElement {
     cfg.guard = guardBox.checked;
     save();
   });
+  // Easy wins build loose habits: suggest the next level after 3+ wins in the last 4 rated games there.
+  const recent = state.games.filter((g) => g.rated && !g.opening?.startsWith('Boss')).slice(-4);
+  const atLevel = recent.filter((g) => g.level === level.id);
+  const wins = atLevel.filter((g) => g.result === 'win').length;
+  const harder = LEVELS[LEVELS.indexOf(level) + 1];
+  let levelUp: HTMLElement | null = null;
+  if (harder && atLevel.length >= 3 && wins >= 3) {
+    const move = h('button.btn.primary.small-btn', { type: 'button' }, `Move up to ${harder.name}`);
+    levelUp = h(
+      'div.level-up',
+      md(`You’ve won **${wins} of your last ${atLevel.length}** games against ${level.name}. Wins that come easily build loose habits, so try **${harder.name} (~${harder.elo})**.`),
+      move,
+    );
+    move.addEventListener('click', () => {
+      step(1);
+      levelUp?.remove();
+    });
+  }
   const start = h('button.btn.primary.wide', { type: 'button' }, 'Play');
   start.addEventListener('click', () => {
     const side: Side = cfg.side === 'random' ? (Math.random() < 0.5 ? 'w' : 'b') : cfg.side;
@@ -123,6 +142,7 @@ function setupPanel(): HTMLElement {
     h('h3', 'New game'),
     h('div.seg-row', ...sideBtns),
     h('div.level-row', minus, h('div.level-label', lvlName, lvlElo), plus),
+    levelUp,
     h('label.toggle', h('span', h('b', 'Opening practice'), h('br'), h('small.muted', 'The computer plays into your repertoire, and I tell you when you leave it.')), rep),
     h('label.toggle', h('span', h('b', 'Blunder guard'), h('br'), h('small.muted', 'I warn you when a move drops material, without saying why. Taking it back makes the game unrated.')), guardBox),
     start,
@@ -221,6 +241,13 @@ function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss, s
   let leftBookNoted = false;
   let lastBookLine: string | undefined;
   let thinking = false;
+  /** Seconds you took per move; the clock starts when it becomes your turn. */
+  const times: number[] = [];
+  let turnStart = Date.now();
+  const yourTurn = () => {
+    turnStart = Date.now();
+    board.setInteractive(true);
+  };
 
   const board = new Board({
     orientation: side,
@@ -351,6 +378,7 @@ function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss, s
   }
 
   function afterLearnerMove(san: string): void {
+    times.push(Math.round((Date.now() - turnStart) / 100) / 10);
     newTurn();
     // The board has already played the move; look up the position before it.
     const prev = new Chess();
@@ -365,7 +393,8 @@ function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss, s
       } else if (!deviatedNoted) {
         deviatedNoted = true;
         const [exp, info] = [...entry.moves.entries()][0];
-        note(`Your repertoire plays **${exp}** here (${info.line.name}). ${info.note} Keep playing, and I’ll add it to your drills.`, 'warn');
+        if (repertoireOpen()) note(`Your repertoire plays **${exp}** here (${info.line.name}). ${info.note} Keep playing, and I’ll add it to your drills.`, 'warn');
+        else note(`For later: your repertoire plays **${exp}** here (${info.line.name}). You’ll learn it in Level 3. For now, just follow the opening principles.`);
       }
     }
     showMoves();
@@ -410,10 +439,11 @@ function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss, s
     coach.append(h('div.guard-btns', back, on));
     back.addEventListener('click', () => {
       board.undo();
+      times.pop();
       rated = false;
       showMoves();
       say('Taken back. Do the safety check, then find a better move.', 'info');
-      board.setInteractive(true);
+      yourTurn();
     });
     on.addEventListener('click', () => {
       coach.lastElementChild?.remove(); // the buttons
@@ -479,7 +509,7 @@ function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss, s
       status.textContent = '';
       describeReply(mv);
       showMoves();
-      if (!checkEnd()) board.setInteractive(true);
+      if (!checkEnd()) yourTurn();
     }, wait);
   }
 
@@ -530,7 +560,7 @@ function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss, s
     };
     const verdict = gradeGame(asGame, book);
     let drillNote = '';
-    if (verdict.kind === 'deviated') {
+    if (verdict.kind === 'deviated' && repertoireOpen()) {
       const d = makeDrill(asGame, verdict);
       if (!state.drills[d.id]) drillNote = 'Your opening slip was added to **Practice → From your games**.';
       state.drills[d.id] = d;
@@ -546,6 +576,7 @@ function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss, s
       rated,
       delta,
       opening: boss ? `Boss: ${boss.name}` : lastBookLine,
+      times,
     };
     state.games = [...state.games, game].slice(-200);
     let crown = false;
@@ -629,9 +660,12 @@ function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss, s
     // Undo back to the learner's last turn.
     board.undo();
     if (board.chess.turn() !== side && board.chess.history().length) board.undo();
+    // Keep one time per move you still have on the board.
+    const mine = board.chess.history().filter((_, i) => i >= startMoves.length && (i % 2 === 0) === (side === 'w')).length;
+    times.length = Math.min(times.length, mine);
     if (board.chess.turn() !== side) {
       setTimeout(botTurn, 200);
-    } else board.setInteractive(true);
+    } else yourTurn();
     rated = false;
     showMoves();
     say('Takeback used: this game won’t count toward your rating.', 'warn');
@@ -654,7 +688,7 @@ function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss, s
   if (boss) counter.textContent = `0 / ${boss.moves}`;
   if (board.chess.turn() !== side) setTimeout(botTurn, 400);
   else {
-    board.setInteractive(true);
+    yourTurn();
     if (boss) counter.textContent = `0 / ${boss.moves}`;
   }
 }

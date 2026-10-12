@@ -1,7 +1,7 @@
 import type { Item } from '../engine/coach';
 import { formatMoves, parseLine, sameSan, sideToMove, squaresFor } from '../engine/notation';
 import type { Grade } from '../engine/srs';
-import { addXp, completeLesson, currentStreak, gradeCard, markHomework, recordTags, save, state, xpToday } from '../engine/store';
+import { addXp, completeLesson, currentStreak, gradeCard, logAnswer, markHomework, recordTags, save, state, xpToday } from '../engine/store';
 import type { ChoiceExercise, EndgameExercise, Exercise, FindExercise, InfoExercise, RecallExercise, SquareExercise, WalkExercise } from '../types';
 import { engine } from '../engine/bot';
 import { Chess } from 'chess.js';
@@ -17,6 +17,8 @@ export interface Result {
   quiet?: boolean;
   title?: string;
   detail?: string;
+  /** What you answered, when it was wrong (a move or an option), for the progress log. */
+  picked?: string;
 }
 
 interface Ctx {
@@ -267,6 +269,7 @@ const mountFind =
         correct,
         grade: correct ? 3 : 1,
         title: correct ? 'Correct!' : tried ? `Not ${tried}` : 'Here’s the idea',
+        picked: correct ? undefined : (tried ?? 'showed answer'),
         detail: (correct ? '' : `Solution: **${answer}**\n\n`) + ex.explain,
       });
     }
@@ -348,6 +351,7 @@ const mountChoice =
         grade: o.correct ? 3 : 1,
         title: o.correct ? 'Correct!' : 'Not quite',
         detail: parts.join('\n\n'),
+        picked: o.correct ? undefined : o.text,
       });
     }
     return () => {
@@ -773,6 +777,7 @@ export function runSession(root: HTMLElement, opts: RunOptions): void {
     }
   });
 
+  let slotStart = Date.now();
   let primaryHandler: () => void = () => undefined;
   let secondaryHandler: (() => void) | undefined;
   primary.addEventListener('click', () => primaryHandler());
@@ -792,6 +797,7 @@ export function runSession(root: HTMLElement, opts: RunOptions): void {
     done(r) {
       const slot = queue[pos];
       if (!slot.retry && slot.item.cardId && !r.quiet) first.set(slot.origin, r);
+      if (!r.quiet) logAnswer({ t: Date.now(), id: slot.item.cardId ?? slot.item.exercise.type, ok: r.correct, secs: Math.round((Date.now() - slotStart) / 100) / 10, picked: r.picked, retry: slot.retry || undefined });
       if (r.quiet) return advance();
       if (!r.correct && opts.mode === 'lesson' && !slot.retry && slot.item.cardId) {
         queue.push({ ...slot, retry: true });
@@ -823,6 +829,7 @@ export function runSession(root: HTMLElement, opts: RunOptions): void {
     fbTitle.textContent = '';
     ctx.secondary(null);
     const slot = queue[pos];
+    slotStart = Date.now();
     const card = h('div.ex-card');
     if (slot.retry) card.append(h('div.tag.retry', '↺ Let’s try that again'));
     else if (slot.item.label && opts.mode === 'practice') card.append(h('div.tag', slot.item.label));

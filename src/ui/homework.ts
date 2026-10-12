@@ -1,6 +1,7 @@
 import { lessonRef } from '../data';
-import { dailyBatch, todaysPlan, weekly, type Task } from '../engine/homework';
-import { getSet } from '../engine/puzzles';
+import { dailyBatch, MIX_SIZE, todaysPlan, weekly, type Task } from '../engine/homework';
+import { getSet, pickRun } from '../engine/puzzles';
+import { state } from '../engine/store';
 import { buildReview } from '../engine/coach';
 import { startSession } from './app';
 import { h } from './dom';
@@ -25,8 +26,12 @@ function runTask(key: string): void {
       return;
     }
     case 'set':
-    case 'mix':
       return openSet(id);
+    case 'mix':
+      void getSet(id).then((set) =>
+        set ? runPuzzleSet({ set, mode: 'test', only: pickRun(set.puzzles, state.puzzles, { size: MIX_SIZE }) }) : missing(),
+      );
+      return;
     case 'speed':
       void getSet(id).then((set) => (set ? runPuzzleSet({ set, mode: 'cycle' }) : missing()));
       return;

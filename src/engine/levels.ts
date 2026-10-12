@@ -38,6 +38,9 @@ export function levelUnlocked(index: number): boolean {
   return !gated(prev.test) || !!state.sets[prev.test!]?.mastered;
 }
 
+/** The repertoire is taught in the last level; opening drills from games wait until it opens. */
+export const repertoireOpen = () => levelUnlocked(LEVELS.length - 1);
+
 export function levelLessons(index: number): LessonRef[] {
   return LESSONS.filter((l) => LEVELS[index].units.includes(l.unit.id));
 }

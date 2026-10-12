@@ -64,8 +64,9 @@ export function buildPlan(now = Date.now()): string[] {
 
   // Mixed, unlabelled review of the previous level while you work through the next one.
   const mixLevel = LEVELS.findIndex((l, i) => l.mix && setAvailable(l.mix) && levelUnlocked(i + 1) && !state.sets[LEVELS[i + 1]?.test ?? '']?.mastered);
+  // Unlabelled practice is where pattern recognition is really tested: both the mix and the daily puzzles.
   if (mixLevel >= 0) keys.push(`mix:${LEVELS[mixLevel].mix}`);
-  else if (setAvailable('daily') && Object.values(state.sets).some((r) => r.mastered)) keys.push('daily');
+  if (setAvailable('daily') && Object.values(state.sets).some((r) => r.mastered)) keys.push('daily');
 
   return keys;
 }
@@ -85,6 +86,8 @@ export function todaysPlan(now = Date.now()): Task[] {
 }
 
 export const DAILY_SIZE = 10;
+/** Puzzles per homework run of a mixed review set (misses first). */
+export const MIX_SIZE = 20;
 
 export function describe(key: string): Task {
   const [kind, id] = key.split(':');
@@ -119,9 +122,9 @@ export function describe(key: string): Task {
       return t(`Endgame drill: ${ref?.lesson.title ?? id}`, 'Play it out against the engine until it’s automatic', 4);
     }
     case 'mix':
-      return t(`Mixed review: ${setTitle(id)}`, 'No labels, like a real game: spot which pattern it is', 8);
+      return t(`Mixed review: ${setTitle(id)}`, `${MIX_SIZE} puzzles with no labels, like a real game: spot which pattern it is`, 6);
     case 'daily':
-      return t('Daily puzzles', `${DAILY_SIZE} mixed puzzles, new every day`, 6);
+      return t('Daily puzzles', `${DAILY_SIZE} mixed puzzles, new every day`, 5);
   }
   return t(key, '', 5);
 }

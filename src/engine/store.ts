@@ -86,6 +86,19 @@ export interface PlayedGame {
   opening?: string;
   /** Your own notes on the game, then the engine's check of them (weekly homework). */
   annotation?: Annotation;
+  /** Seconds you took for each of your moves. */
+  times?: number[];
+}
+
+/** One answered question, for reviewing where time and mistakes go. */
+export interface AnswerLog {
+  t: number;
+  /** Card id (lesson#index) or exercise type. */
+  id: string;
+  ok: boolean;
+  secs: number;
+  picked?: string;
+  retry?: boolean;
 }
 
 /** A self-annotated game: your critical moments first, then what the engine found. */
@@ -162,6 +175,8 @@ export interface State {
   runs: Record<string, SavedRun>;
   /** Your history on each puzzle, so runs can bring back misses and skip what you've just seen. */
   puzzles: Record<string, PuzzleRecord>;
+  /** Recent answers to lesson and review questions (newest last). */
+  answers: AnswerLog[];
 }
 
 const KEY = 'chess-mentor.v1';
@@ -200,6 +215,7 @@ function fresh(): State {
     homework: { day: '', plan: [], done: [] },
     runs: {},
     puzzles: {},
+    answers: [],
   };
 }
 
@@ -283,6 +299,12 @@ export function completeLesson(id: string, mistakes: number, now = Date.now()): 
     mistakes: prev ? Math.min(prev.mistakes, mistakes) : mistakes,
     runs: (prev?.runs ?? 0) + 1,
   };
+}
+
+const MAX_ANSWERS = 2000;
+export function logAnswer(a: AnswerLog): void {
+  state.answers.push(a);
+  if (state.answers.length > MAX_ANSWERS) state.answers.splice(0, state.answers.length - MAX_ANSWERS);
 }
 
 /** New lessons a day: learning more at once crowds out the practice that makes patterns stick. */

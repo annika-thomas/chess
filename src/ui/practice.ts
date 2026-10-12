@@ -17,7 +17,7 @@ import { h } from './dom';
 import { icon, unitIcon } from './icons';
 import { loadSets, PASS, RUN_SIZE, themeOf, themePool, type PuzzleSet } from '../engine/puzzles';
 import { runPuzzleSet } from './puzzleRun';
-import { setUnlocked } from '../engine/levels';
+import { repertoireOpen, setUnlocked } from '../engine/levels';
 import type { Side } from '../types';
 import { topBar } from './learn';
 
@@ -130,9 +130,11 @@ export function renderPractice(host: HTMLElement): void {
   host.append(
     card(
       'From your games',
-      drills
-        ? `${drills} position${drills > 1 ? 's' : ''} where you left your repertoire in real games. Fix the exact moves you got wrong.`
-        : 'Connect Lichess or Chess.com and I will find where your games left your repertoire.',
+      drills && !repertoireOpen()
+        ? `${drills} opening position${drills > 1 ? 's' : ''} from your games, saved for Level 3 when you learn the repertoire. They won’t come up in your reviews until then, but you can look now.`
+        : drills
+          ? `${drills} position${drills > 1 ? 's' : ''} where you left your repertoire in real games. Fix the exact moves you got wrong.`
+          : 'Connect Lichess or Chess.com and I will find where your games left your repertoire.',
       drills ? 'Fix them' : 'Connect',
       () => (drills ? startSession('Your games', buildGameDrills(), 'practice') : go('profile')),
       { accent: '#8b5a2b' },
