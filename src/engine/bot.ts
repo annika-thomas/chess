@@ -171,6 +171,9 @@ export async function judgeMove(fen: string, san: string, depth = 10): Promise<M
   return { loss: Math.max(0, before - mine), best: best?.move ?? '', before, after: mine };
 }
 
+/** Win chance (0–100) for a centipawn score, as Lichess computes accuracy. */
+export const winPct = (cp: number) => 50 + 50 * (2 / (1 + Math.exp(-0.00368208 * clampScore(cp))) - 1);
+
 /**
  * Rough size of a loss in plain words. Stockfish's scores are scaled to winning chances, not material
  * (a hung bishop reads about +7), so we don't call them "pawns".

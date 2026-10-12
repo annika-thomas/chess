@@ -58,6 +58,18 @@ function check(ex: Exercise): void {
       expect(ex.limit).toBeGreaterThan(0);
       break;
     }
+    case 'tap': {
+      new Chess(ex.fen);
+      expect(ex.answers.length).toBeGreaterThan(0);
+      for (const sq of ex.answers) expect(sq).toMatch(/^[a-h][1-8]$/);
+      break;
+    }
+    case 'grade': {
+      const c = new Chess(ex.fen);
+      expect(c.turn()).toBe(ex.side);
+      for (const m of [...ex.good, ...(ex.ok ?? [])]) expect(tryMove(new Chess(ex.fen), m), `move ${m}`).not.toBeNull();
+      break;
+    }
     case 'choice': {
       if (ex.setup || ex.fen) setupBoard(ex);
       expect(ex.options.filter((o) => o.correct).length).toBe(1);

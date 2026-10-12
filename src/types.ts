@@ -129,7 +129,33 @@ export interface EndgameExercise extends BaseExercise {
   guide?: 'box';
 }
 
-export type Exercise = InfoExercise | WalkExercise | RecallExercise | FindExercise | ChoiceExercise | SquareExercise | EndgameExercise;
+/** Tap a square: "tap your worst piece", "tap the outpost". Answers are curated, then checked with an engine. */
+export interface TapExercise extends BaseExercise {
+  type: 'tap';
+  prompt: string;
+  fen: string;
+  side: Side;
+  /** Squares that count as correct. */
+  answers: string[];
+  explain: string;
+}
+
+/**
+ * Find a good move for an idea ("put a rook on the open file"). Several moves can be right: `good` holds the
+ * moves that carry out the idea and are within ~5% win chance of the engine's best (precomputed with Stockfish),
+ * `ok` those within ~10%. With no `good` list (e.g. positions from your own games) the engine grades live.
+ */
+export interface GradeExercise extends BaseExercise {
+  type: 'grade';
+  prompt: string;
+  fen: string;
+  side: Side;
+  good: string[];
+  ok?: string[];
+  explain: string;
+}
+
+export type Exercise = InfoExercise | WalkExercise | RecallExercise | FindExercise | ChoiceExercise | SquareExercise | EndgameExercise | TapExercise | GradeExercise;
 
 export interface Lesson {
   id: string;

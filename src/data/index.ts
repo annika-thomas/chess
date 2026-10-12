@@ -5,6 +5,7 @@ import { principles, survive } from './foundations';
 import * as L from './lines';
 import { patternGym } from './patterns';
 import { tactics } from './tactics';
+import { placement } from './placement';
 import { beyond, italian, punish } from './white';
 
 import {
@@ -42,7 +43,7 @@ const old = [principles, survive, tactics];
 const withPractice = (l: Lesson, practice: string): Lesson => ({ ...l, practice });
 
 const L1 = 'Level 1 · Foundations';
-const L2 = 'Level 2 · Tactics & Endgames';
+const L2 = 'Level 2 · Tactics, Placement & Endgames';
 const L3 = 'Level 3 · Your Repertoire';
 
 const level1: Unit[] = [
@@ -96,6 +97,8 @@ const level2: Unit[] = [
     icon: 'icon:bolt',
     lessons: [withPractice(lesson(old, 'tactics-discovery'), 'discovered'), doubleCheck],
   },
+  // Positional play in small doses alongside tactics (Steps Method, Yusupov), not after them.
+  { ...placement, section: L2 },
   {
     id: 'combinations',
     title: 'Combinations',

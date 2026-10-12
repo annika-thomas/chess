@@ -2,8 +2,8 @@ import type { Item } from '../engine/coach';
 import { formatMoves, parseLine, sameSan, sideToMove, squaresFor } from '../engine/notation';
 import type { Grade } from '../engine/srs';
 import { addXp, completeLesson, currentStreak, gradeCard, logAnswer, markHomework, recordTags, save, state, xpToday } from '../engine/store';
-import type { ChoiceExercise, EndgameExercise, Exercise, FindExercise, InfoExercise, RecallExercise, SquareExercise, WalkExercise } from '../types';
-import { engine } from '../engine/bot';
+import type { ChoiceExercise, EndgameExercise, Exercise, FindExercise, GradeExercise, InfoExercise, RecallExercise, SquareExercise, TapExercise, WalkExercise } from '../types';
+import { engine, judgeMove, winPct } from '../engine/bot';
 import { Chess } from 'chess.js';
 import { Board, pawnSkeleton } from './board';
 import { clear, figHtml, h, inline, md, shuffle } from './dom';
@@ -718,6 +718,118 @@ const mountEndgame =
     };
   };
 
+// ───────────────────────── Positional exercises ─────────────────────────
+
+/** Tap the square that answers the question (worst piece, outpost, weak pawn, open file...). */
+const mountTap =
+  (ex: TapExercise): Mount =>
+  (host, ctx) => {
+    let answered = false;
+    const board = new Board({
+      orientation: ex.side,
+      viewOnly: false,
+      onSelect: (sq) => {
+        if (answered) return;
+        answered = true;
+        const ok = ex.answers.includes(sq);
+        board.mark(ex.answers, ok ? [] : [sq]);
+        ctx.done({ correct: ok, grade: ok ? 3 : 1, title: ok ? 'Correct!' : 'Not that one', detail: ex.explain, picked: ok ? undefined : sq });
+      },
+    });
+    board.load([], ex.fen);
+    board.setInteractive(false);
+    host.append(prompt(ex.prompt, 'Tap a square on the board'), board.el);
+    ctx.button('Tap the board', () => undefined, false);
+    return () => board.destroy();
+  };
+
+const sanList = (moves: string[]) => moves.map((m) => `**${m}**`).join(', ');
+
+/** Play a good move for an idea. Any move from the precomputed list counts; otherwise the engine judges. */
+const mountGrade =
+  (ex: GradeExercise): Mount =>
+  (host, ctx) => {
+    let done = false;
+    const board = new Board({
+      orientation: ex.side,
+      onMove: (san) => {
+        if (done) return false;
+        done = true;
+        board.setInteractive(false);
+        void judge(san);
+        return true;
+      },
+    });
+    board.load([], ex.fen);
+    host.append(prompt(ex.prompt, `${ex.side === 'w' ? 'White' : 'Black'} to play · several moves can be right`), board.el);
+    ctx.button('Your move', () => undefined, false);
+    board.setInteractive(true);
+
+    const showGood = (moves: string[]) => {
+      const c = new Chess(ex.fen);
+      board.arrows(
+        moves.slice(0, 3).flatMap((m) => {
+          try {
+            const mv = c.move(m);
+            c.undo();
+            return [{ from: mv.from, to: mv.to, color: 'green' as const }];
+          } catch {
+            return [];
+          }
+        }),
+      );
+    };
+
+    async function judge(san: string): Promise<void> {
+      let good = ex.good;
+      let ok = ex.ok ?? [];
+      let verdict: 'good' | 'ok' | 'bad';
+      if (good.length) {
+        verdict = good.some((g) => sameSan(g, san)) ? 'good' : ok.some((g) => sameSan(g, san)) ? 'ok' : 'bad';
+      } else {
+        // Live grading (positions from your own games): compare win chances with the engine's best.
+        ctx.button('Checking…', () => undefined, false);
+        try {
+          const lines = await engine.analyse(ex.fen, { depth: 12, multipv: 4 });
+          const c = new Chess(ex.fen);
+          const bestW = winPct(lines[0]?.score ?? 0);
+          const toSan = (uci: string) => {
+            const mv = c.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] ?? 'q' });
+            c.undo();
+            return mv.san;
+          };
+          good = lines.filter((l) => bestW - winPct(l.score) <= 5).map((l) => toSan(l.move));
+          ok = lines.filter((l) => bestW - winPct(l.score) > 5 && bestW - winPct(l.score) <= 10).map((l) => toSan(l.move));
+          const j = await judgeMove(ex.fen, san, 12);
+          const loss = winPct(j.before) - winPct(j.after);
+          verdict = loss <= 5 ? 'good' : loss <= 10 ? 'ok' : 'bad';
+        } catch {
+          verdict = 'bad';
+        }
+      }
+      const others = good.filter((g) => !sameSan(g, san));
+      showGood(verdict === 'good' ? others : good);
+      const detail = [
+        verdict === 'good'
+          ? others.length
+            ? `Other good moves here: ${sanList(others)}.`
+            : 'That was the move.'
+          : verdict === 'ok'
+            ? `Playable, but ${sanList(good)} ${good.length > 1 ? 'were' : 'was'} better.`
+            : `Better: ${sanList(good)} (green arrows).`,
+        ex.explain,
+      ].join('\n\n');
+      ctx.done({
+        correct: verdict !== 'bad',
+        grade: verdict === 'good' ? 3 : verdict === 'ok' ? 2 : 1,
+        title: verdict === 'good' ? 'Good move!' : verdict === 'ok' ? 'Playable' : 'Not quite',
+        detail,
+        picked: verdict === 'good' ? undefined : san,
+      });
+    }
+    return () => board.destroy();
+  };
+
 export function mountExercise(ex: Exercise): Mount {
   switch (ex.type) {
     case 'info':
@@ -734,6 +846,10 @@ export function mountExercise(ex: Exercise): Mount {
       return mountSquare(ex);
     case 'endgame':
       return mountEndgame(ex);
+    case 'tap':
+      return mountTap(ex);
+    case 'grade':
+      return mountGrade(ex);
   }
 }
 

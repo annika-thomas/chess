@@ -17,6 +17,12 @@ export interface Item {
 
 export const TAG_LABELS: Record<string, string> = {
   coordinates: 'Finding squares',
+  activity: 'Piece activity',
+  files: 'Open files & the 7th rank',
+  outpost: 'Outposts',
+  pawns: 'Weak & passed pawns',
+  bishops: 'Good & bad bishops',
+  space: 'Space',
   notation: 'Reading notation',
   center: 'Controlling the center',
   development: 'Developing pieces',
@@ -163,6 +169,19 @@ export function buildPatternSprint(): Item[] {
       isLessonDone(c.lesson.id),
   );
   return shuffleItems(pool.map(toItem)).slice(0, 10);
+}
+
+/** Positional practice: placement questions from lessons you've done, mixed and unlabelled. */
+export const POSITIONAL_TAGS = ['activity', 'files', 'outpost', 'pawns', 'bishops', 'space'];
+export function buildPositionalDrill(size = 8, now = Date.now()): Item[] {
+  const pool = CARDS.filter((c) => c.unit.id === 'placement' && isLessonDone(c.lesson.id) && c.exercise.type !== 'info');
+  // Weakest first (lowest recall), then shuffled so the theme isn't predictable.
+  const ranked = pool
+    .map((c) => ({ c, r: state.cards[c.id] ? retrievability(state.cards[c.id], now) : 0 }))
+    .sort((a, b) => a.r - b.r)
+    .slice(0, size)
+    .map(({ c }) => ({ exercise: c.exercise, tags: c.tags, cardId: c.id }));
+  return shuffleItems(ranked);
 }
 
 export function buildUnitReview(unitId: string): Item[] {
