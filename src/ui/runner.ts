@@ -1,7 +1,8 @@
 import type { Item } from '../engine/coach';
 import { formatMoves, parseLine, sameSan, sideToMove, squaresFor } from '../engine/notation';
 import type { Grade } from '../engine/srs';
-import { addXp, completeLesson, currentStreak, gradeCard, logAnswer, markHomework, recordTags, save, state, xpToday } from '../engine/store';
+import { addXp, completeLesson, currentStreak, gradeCard, logAnswer, logProgress, markHomework, recordTags, save, state, xpToday } from '../engine/store';
+import { isDue } from '../engine/srs';
 import type { ChoiceExercise, EndgameExercise, Exercise, FindExercise, GradeExercise, InfoExercise, RecallExercise, SquareExercise, TapExercise, WalkExercise } from '../types';
 import { botMove, engine, evaluate, judgeMove, levelById, lossLabel, winPct } from '../engine/bot';
 import { Chess } from 'chess.js';
@@ -922,6 +923,9 @@ export function runSession(root: HTMLElement, opts: RunOptions): void {
   });
 
   let slotStart = Date.now();
+  const converts: boolean[] = [];
+  // Cards already due when the session starts: remembering them is delayed retrieval, worth extra XP.
+  const dueAtStart = new Set(opts.items.filter((it) => it.cardId && state.cards[it.cardId] && isDue(state.cards[it.cardId], Date.now())).map((it) => it.cardId!));
   let primaryHandler: () => void = () => undefined;
   let secondaryHandler: (() => void) | undefined;
   primary.addEventListener('click', () => primaryHandler());
@@ -941,7 +945,8 @@ export function runSession(root: HTMLElement, opts: RunOptions): void {
     done(r) {
       const slot = queue[pos];
       if (!slot.retry && slot.item.cardId && !r.quiet) first.set(slot.origin, r);
-      if (!r.quiet) logAnswer({ t: Date.now(), id: slot.item.cardId ?? slot.item.exercise.type, ok: r.correct, secs: Math.round((Date.now() - slotStart) / 100) / 10, picked: r.picked, retry: slot.retry || undefined });
+      if (!slot.retry && !r.quiet && slot.item.tags.includes('convert')) converts.push(r.correct);
+      if (!r.quiet) logAnswer({ t: Date.now(), id: slot.item.cardId ?? slot.item.tags[0] ?? slot.item.exercise.type, ok: r.correct, secs: Math.round((Date.now() - slotStart) / 100) / 10, picked: r.picked, retry: slot.retry || undefined });
       if (r.quiet) return advance();
       if (!r.correct && opts.mode === 'lesson' && !slot.retry && slot.item.cardId) {
         queue.push({ ...slot, retry: true });
@@ -994,7 +999,18 @@ export function runSession(root: HTMLElement, opts: RunOptions): void {
       recordTags(item.tags, r.correct, now);
     }
     const before = currentStreak(now);
-    const xp = opts.mode === 'lesson' ? 10 + (mistakes === 0 ? 5 : 0) : 5 + correct;
+    // XP rewards learning, not volume: a first lesson is worth more than a redo; in practice, remembering a due
+    // card and converting a win count extra.
+    const firstTime = !!opts.lessonId && !state.lessons[opts.lessonId];
+    const dueCorrect = results.filter(([origin, r]) => r.correct && dueAtStart.has(opts.items[origin].cardId ?? '')).length;
+    const convertWins = converts.filter(Boolean).length;
+    const xp =
+      opts.mode === 'lesson'
+        ? firstTime
+          ? 10 + (mistakes === 0 ? 5 : 0)
+          : 3
+        : 2 + correct + dueCorrect + convertWins * 3;
+    if (converts.length) logProgress({ t: now, kind: 'convert', correct: convertWins, total: converts.length });
     addXp(xp, now);
     if (opts.lessonId) {
       completeLesson(opts.lessonId, mistakes, now);

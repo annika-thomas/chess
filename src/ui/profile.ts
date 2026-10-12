@@ -1,3 +1,4 @@
+import { progressLines } from '../engine/progress';
 import { CARDS, LESSONS } from '../data';
 import { tagLabel } from '../engine/coach';
 import { analyzeGames, fetchChessCom, fetchLichess, latestRatings } from '../engine/importer';
@@ -174,10 +175,25 @@ export function renderProfile(host: HTMLElement): void {
       'section.panel',
       h('div.pstats', stat(String(currentStreak()), 'day streak', icon('flame')), stat(`${state.streak.best}`, 'best streak'), stat(`${state.xp}`, 'total XP')),
       h('div.pstats', stat(`${lessonsDone}/${LESSONS.length}`, 'lessons'), stat(String(cards), 'patterns learned'), stat(`${state.profile.goal}`, 'XP goal')),
+      h(
+        'p.muted.streak-note',
+        !state.streak.freezeAt || Date.now() - state.streak.freezeAt >= 7 * 86_400_000
+          ? 'Streak freeze ready: if you miss a day, your streak survives (one per week).'
+          : 'Streak freeze used this week: it saved your streak. It’s back in a few days.',
+      ),
       h('h4', 'This week'),
       weekChart(),
     ),
   );
+  const lines = progressLines();
+  if (lines.length)
+    host.append(
+      h(
+        'section.panel.progress-panel',
+        h('h3', 'Your progress'),
+        ...lines.map((l) => h('div.prog-row', h('div', h('b', l.label), h('small.muted', l.detail)), h('span.prog-value', l.value))),
+      ),
+    );
 
   const tags = Object.entries(state.tags)
     .filter(([t, s]) => s.seen >= 2 && t !== 'from-games')

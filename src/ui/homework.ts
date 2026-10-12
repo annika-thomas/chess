@@ -2,6 +2,7 @@ import { lessonRef } from '../data';
 import { dailyBatch, MIX_SIZE, todaysPlan, weekly, type Task } from '../engine/homework';
 import { getSet, pickRun } from '../engine/puzzles';
 import { state } from '../engine/store';
+import { progressLines } from '../engine/progress';
 import { buildReview } from '../engine/coach';
 import { startSession } from './app';
 import { h } from './dom';
@@ -114,5 +115,6 @@ export function homeworkCard(): HTMLElement {
     ...tasks.map((t, i) => taskRow(t, i + 1)),
     h('div.hw-sub', 'This week'),
     weeklyRow(),
+    progressLines()[0] ? h('p.hw-progress-line', icon('star'), ` ${progressLines()[0].label}: `, h('b', progressLines()[0].value), ` (${progressLines()[0].detail})`) : null,
   );
 }

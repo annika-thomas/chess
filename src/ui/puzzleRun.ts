@@ -1,7 +1,7 @@
 import { Chess } from 'chess.js';
 import type { Key } from '@lichess-org/chessground/types';
 import { accuracy, avgSeconds, FLUENT, isFluent, loadedSets, PASS, pickRun, themeOf, themePool, type Puzzle, type PuzzleSet, type SetRun } from '../engine/puzzles';
-import { addXp, markHomework, save, state, type SavedRun } from '../engine/store';
+import { addXp, logProgress, markHomework, save, state, type SavedRun } from '../engine/store';
 import type { Side } from '../types';
 import { render, sheet } from './app';
 import { Board } from './board';
@@ -354,9 +354,19 @@ export function runPuzzleSet(o: SetOpts): void {
     if (o.mode === 'cycle') timer = window.setTimeout(advance, 700);
   }
 
+  /** XP for learning signals, not volume: first-try solves, fixed misses, solves after a delay. */
+  let xpEarned = 0;
+  let fixedMisses = 0;
   /** Remember how this puzzle went (retries of a miss don't overwrite the miss). */
   function record(p: Puzzle, ok: boolean, secs: number): void {
     const prev = state.puzzles[p.id];
+    if (ok) {
+      xpEarned += 1;
+      if (prev && !prev.lastOk) {
+        xpEarned += 2;
+        fixedMisses++;
+      } else if (prev && Date.now() - prev.last > 86_400_000) xpEarned += 1;
+    }
     state.puzzles[p.id] = {
       seen: (prev?.seen ?? 0) + 1,
       wrong: (prev?.wrong ?? 0) + (ok ? 0 : 1),
@@ -401,7 +411,12 @@ export function runPuzzleSet(o: SetOpts): void {
       if (passed && !wasMastered) note = 'Set mastered: the next step is unlocked.';
       else if (fluent) note = `Fluent run #${rec.fluentRuns}: 85%+ at ${FLUENT.seconds}s or less per puzzle. That’s the Woodpecker target.`;
     }
-    addXp(5 + correct);
+    // Unlabelled practice counts extra: it's harder and closer to a game.
+    const unlabelled = o.mode === 'test';
+    const xp = 3 + xpEarned + (unlabelled ? Math.ceil(correct / 2) : 0);
+    addXp(xp);
+    if (o.mode !== 'retry' && (o.set.id === 'mixed' || o.set.id === 'daily' || o.set.id.startsWith('mix') || o.set.id === 'retry-misses'))
+      logProgress({ t: Date.now(), kind: 'mixed', correct, total: queue.length });
     save();
     o.onFinish?.(run, passed);
     (passed ? sound.finish : sound.wrong)();
@@ -424,6 +439,7 @@ export function runPuzzleSet(o: SetOpts): void {
         h('div.sheet-art', icon(passed ? (fluent ? 'trophy' : 'star') : 'target')),
         h('h2', headline),
         h('div.rating-change', h('b', `${correct} / ${queue.length}`), ` · ${pct}% · ${avg.toFixed(1)}s each`),
+        h('p.muted', `+${xp} XP${fixedMisses ? ` · ${fixedMisses} past miss${fixedMisses > 1 ? 'es' : ''} fixed` : ''}`),
         o.mode !== 'retry'
           ? md(
               passed

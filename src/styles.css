@@ -2300,3 +2300,27 @@ cg-board square.mentor-target {
   color: var(--muted);
   text-decoration: underline;
 }
+
+.prog-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+.prog-row div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.prog-value {
+  font-weight: 800;
+  color: var(--green);
+  white-space: nowrap;
+}
+.hw-progress-line {
+  margin: 10px 8px 2px;
+  font-size: 13px;
+  color: var(--text2);
+}

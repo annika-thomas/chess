@@ -150,7 +150,8 @@ export interface State {
   profile: Profile;
   xp: number;
   xpByDay: Record<string, number>;
-  streak: { count: number; lastDay: string; best: number };
+  /** freezeAt: when a missed day was last forgiven (one per week). */
+  streak: { count: number; lastDay: string; best: number; freezeAt?: number };
   lessons: Record<string, LessonRecord>;
   cards: Record<string, Card>;
   tags: Record<string, TagStat>;
@@ -179,6 +180,7 @@ export interface State {
   answers: AnswerLog[];
   /** What "Up next" last sent you to, so it can vary the next pick. */
   lastActivity?: { kind: string; at: number };
+  progress: ProgressPoint[];
 }
 
 const KEY = 'chess-mentor.v1';
@@ -218,6 +220,7 @@ function fresh(): State {
     runs: {},
     puzzles: {},
     answers: [],
+    progress: [],
   };
 }
 
@@ -255,20 +258,48 @@ export function requestPersistence(): void {
   navigator.storage?.persist?.().catch(() => undefined);
 }
 
+const DAY = 86_400_000;
+const WEEK = 7 * DAY;
+
+/** A forgiving streak: one missed day a week is covered automatically (habit without anxiety). */
+const freezeReady = (now: number) => !state.streak.freezeAt || now - state.streak.freezeAt >= WEEK;
+const missedOneDay = (now: number) => state.streak.lastDay === today(now - 2 * DAY);
+
 export function currentStreak(now = Date.now()): number {
   const { count, lastDay } = state.streak;
-  return lastDay === today(now) || lastDay === yesterday(now) ? count : 0;
+  if (lastDay === today(now) || lastDay === yesterday(now)) return count;
+  return missedOneDay(now) && freezeReady(now) ? count : 0;
 }
+
+/** Whether today's practice would use the weekly freeze to keep the streak. */
+export const streakNeedsFreeze = (now = Date.now()) => missedOneDay(now) && freezeReady(now);
 
 export function addXp(amount: number, now = Date.now()): void {
   const day = today(now);
   state.xp += amount;
   state.xpByDay[day] = (state.xpByDay[day] ?? 0) + amount;
   if (state.streak.lastDay !== day) {
-    state.streak.count = state.streak.lastDay === yesterday(now) ? state.streak.count + 1 : 1;
+    if (state.streak.lastDay === yesterday(now)) state.streak.count++;
+    else if (streakNeedsFreeze(now)) {
+      state.streak.count++;
+      state.streak.freezeAt = now;
+    } else state.streak.count = 1;
     state.streak.lastDay = day;
     state.streak.best = Math.max(state.streak.best, state.streak.count);
   }
+}
+
+/** Results of unlabelled and conversion practice over time, for progress feedback. */
+export interface ProgressPoint {
+  t: number;
+  kind: 'mixed' | 'convert';
+  correct: number;
+  total: number;
+}
+
+export function logProgress(p: ProgressPoint): void {
+  state.progress.push(p);
+  if (state.progress.length > 1000) state.progress.splice(0, state.progress.length - 1000);
 }
 
 export function xpToday(now = Date.now()): number {
