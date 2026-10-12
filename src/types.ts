@@ -125,6 +125,8 @@ export interface EndgameExercise extends BaseExercise {
   goal: 'mate' | 'promote' | 'hold';
   limit: number;
   explain: string;
+  /** Coaching overlay: 'box' shades the squares the enemy king can still reach. */
+  guide?: 'box';
 }
 
 export type Exercise = InfoExercise | WalkExercise | RecallExercise | FindExercise | ChoiceExercise | SquareExercise | EndgameExercise;

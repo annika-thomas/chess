@@ -26,7 +26,7 @@ describe('daily homework plan', () => {
 
   it('assigns the practice set before the next lesson, plus review, a speed run and an endgame drill', () => {
     setAvailableSets(['mate1', 'hanging']);
-    state.lessons = done([...BASICS, 'tactics-values', 'safety-check', 'survive-blunder', 'check-escape', 'mate-one', 'mate-queen']);
+    state.lessons = done([...BASICS, 'tactics-values', 'safety-check', 'capture-check', 'survive-blunder', 'check-escape', 'mate-one', 'mate-queen']);
     state.sprintBest = { w: 20, b: 12 };
     state.cards = { 'x#1': { id: 'x#1' } as never };
     state.sets = { hanging: { attempts: 1, bestAccuracy: 0.9, mastered: true, fluentRuns: 0, lastAt: 1, lastAccuracy: 0.9 } };
@@ -59,7 +59,7 @@ describe('daily homework plan', () => {
 
   it('keeps a typical day near 30 minutes', () => {
     setAvailableSets(['mate1', 'hanging', 'daily']);
-    state.lessons = done([...BASICS, 'tactics-values', 'safety-check', 'survive-blunder', 'check-escape', 'mate-one', 'mate-queen']);
+    state.lessons = done([...BASICS, 'tactics-values', 'safety-check', 'capture-check', 'survive-blunder', 'check-escape', 'mate-one', 'mate-queen']);
     state.sprintBest = { w: 20, b: 20 };
     state.cards = { 'x#1': { id: 'x#1' } as never };
     state.sets = { hanging: { attempts: 1, bestAccuracy: 0.9, mastered: true, fluentRuns: 0, lastAt: 1, lastAccuracy: 0.9 } };
@@ -120,5 +120,22 @@ describe('follow-up puzzle sets', () => {
     expect(setUnlocked('pin-2')).toBe(false);
     state.sets.pin = { attempts: 1, bestAccuracy: 0.8, mastered: true, fluentRuns: 0, lastAt: 1, lastAccuracy: 0.8 };
     expect(setUnlocked('pin-2')).toBe(true);
+  });
+});
+
+describe('daily cap on new lessons', () => {
+  it('steers to practice after two new lessons today, without locking anything', async () => {
+    const { advise, isUnlocked } = await import('../src/engine/coach');
+    const { lessonRef } = await import('../src/data');
+    const now = Date.now();
+    state.lessons = done(BASICS);
+    state.lessons['tactics-values'] = { completedAt: now - 1000, mistakes: 0, runs: 1 };
+    expect(advise(now).action.kind).toBe('lesson');
+    state.lessons['safety-check'] = { completedAt: now - 500, mistakes: 0, runs: 1 };
+    const a = advise(now);
+    expect(a.headline).toContain('2 new lessons today');
+    expect(a.action.kind).not.toBe('lesson');
+    // The next lesson is still open if you want it.
+    expect(isUnlocked(lessonRef('capture-check')!)).toBe(true);
   });
 });

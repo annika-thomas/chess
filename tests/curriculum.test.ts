@@ -48,6 +48,16 @@ function check(ex: Exercise): void {
       expect(ex.squares?.length ?? ex.count ?? ex.seconds ?? 8).toBeGreaterThan(0);
       break;
     }
+    case 'endgame': {
+      expect(ex.fens.length).toBeGreaterThan(0);
+      for (const fen of ex.fens) {
+        const c = new Chess(fen);
+        expect(c.turn(), fen).toBe(ex.side);
+        expect(c.isGameOver(), fen).toBe(false);
+      }
+      expect(ex.limit).toBeGreaterThan(0);
+      break;
+    }
     case 'choice': {
       if (ex.setup || ex.fen) setupBoard(ex);
       expect(ex.options.filter((o) => o.correct).length).toBe(1);

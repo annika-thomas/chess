@@ -3,7 +3,7 @@ import type { Exercise } from '../types';
 import { isDue, retrievability } from './srs';
 import { currentStep, lessonUnlocked } from './levels';
 import { LEVELS } from '../data';
-import { currentStreak, state, xpToday } from './store';
+import { currentStreak, NEW_PER_DAY, newLessonsToday, state, xpToday } from './store';
 
 /** One item in a runnable session. */
 export interface Item {
@@ -293,6 +293,20 @@ export function advise(now = Date.now()): Advice {
       body: 'Pass it at 80% to unlock the next lesson. A coach wouldn’t move you on until the pattern sticks, and neither will I.',
       action: { kind: 'set', setId: step.ref.lesson.practice! },
       cta: 'Start the set',
+    };
+  }
+  if (next && newLessonsToday(now) >= NEW_PER_DAY) {
+    // Enough new material for one day: steer to practice that makes it stick.
+    const speed = Object.entries(state.sets)
+      .filter(([id, r]) => r.mastered && id !== 'daily' && !id.includes('test'))
+      .sort(([, a], [, b]) => a.fluentRuns - b.fluentRuns || a.lastAt - b.lastAt)[0];
+    return {
+      headline: `${NEW_PER_DAY} new lessons today: now make them stick`,
+      body: speed
+        ? 'New patterns stick when you practice them before adding more. A speed run of a set you’ve passed, a review, or a game is the best use of the rest of today. Next lesson tomorrow.'
+        : 'New patterns stick when you practice them before adding more. Review or play a game, and pick up the next lesson tomorrow.',
+      action: speed ? { kind: 'set', setId: speed[0] } : due ? { kind: 'review', count: due } : { kind: 'done' },
+      cta: speed ? 'Speed run' : due ? 'Review' : 'Done for today',
     };
   }
   if (next) {

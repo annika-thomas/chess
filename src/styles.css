@@ -793,6 +793,9 @@ cg-board square.mentor-good {
 cg-board square.mentor-bad {
   background: rgba(255, 75, 75, 0.5);
 }
+cg-board square.mentor-box {
+  background: rgba(250, 65, 45, 0.28);
+}
 
 
 .bubble {
@@ -2243,4 +2246,24 @@ cg-board square.mentor-target {
   margin-top: 4px;
   color: var(--text2);
   font-size: 14px;
+}
+
+.cap-note {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--card);
+  border-left: 4px solid var(--gold);
+  font-size: 14px;
+  color: var(--text2);
+}
+
+.box-note {
+  margin: 10px 16px 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--card);
+  font-size: 14px;
+  color: var(--text2);
+  line-height: 1.4;
 }

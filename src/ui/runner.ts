@@ -546,6 +546,11 @@ const mountEndgame =
     const myQueen = me === 'w' ? 'Q' : 'q';
     const theirQueen = me === 'w' ? 'q' : 'Q';
     const theirPawn = me === 'w' ? 'p' : 'P';
+    const myRook = me === 'w' ? 'R' : 'r';
+    // "Lost your mating piece" only applies if you started with a queen or rook.
+    const heavyAtStart = countPieces(fen, myQueen) + countPieces(fen, myRook) > 0;
+    const boxNote = h('div.box-note');
+    let lastBox = 0;
     let myMoves = 0;
     let over = false;
     let timer: number | undefined;
@@ -561,7 +566,7 @@ const mountEndgame =
       },
     });
     board.load([], fen);
-    host.append(prompt(ex.prompt, `${me === 'w' ? 'White' : 'Black'} to play · ${goalText()}`), h('div.sq-head', h('div'), status), board.el);
+    host.append(prompt(ex.prompt, `${me === 'w' ? 'White' : 'Black'} to play · ${goalText()}`), h('div.sq-head', h('div'), status), board.el, ex.guide ? boxNote : '');
     ctx.button('Your move', () => undefined, false);
 
     function goalText(): string {
@@ -573,6 +578,54 @@ const mountEndgame =
     }
     function updateStatus(): void {
       status.textContent = `Move ${myMoves} / ${ex.limit}`;
+      if (ex.guide === 'box') showBox();
+    }
+
+    /** The squares the enemy king can reach without walking into an attack: its "box". */
+    function boxSquares(): string[] {
+      const c = new Chess(board.chess.fen());
+      const kingSq = c
+        .board()
+        .flat()
+        .find((x) => x && x.type === 'k' && x.color === them)?.square;
+      if (!kingSq) return [];
+      type Sq = Parameters<Chess['get']>[0];
+      // Lift the king off the board so squares behind it along a line still count as attacked.
+      c.remove(kingSq);
+      const seen = new Set<string>([kingSq]);
+      const queue: string[] = [kingSq];
+      while (queue.length) {
+        const sq = queue.shift()!;
+        const f = sq.charCodeAt(0);
+        const r = Number(sq[1]);
+        for (let df = -1; df <= 1; df++)
+          for (let dr = -1; dr <= 1; dr++) {
+            const nf = f + df;
+            const nr = r + dr;
+            if ((!df && !dr) || nf < 97 || nf > 104 || nr < 1 || nr > 8) continue;
+            const n = String.fromCharCode(nf) + nr;
+            if (seen.has(n) || c.isAttacked(n as Sq, me)) continue;
+            const piece = c.get(n as Sq);
+            if (piece && piece.color === them) continue;
+            seen.add(n);
+            queue.push(n);
+          }
+      }
+      return [...seen];
+    }
+
+    function showBox(): void {
+      const box = boxSquares();
+      board.highlight(box, 'mentor-box');
+      const n = box.length;
+      let tip: string;
+      if (!lastBox) tip = 'The shaded squares are the king’s box. Make it smaller every move, keeping your queen a knight’s jump from the king.';
+      else if (n < lastBox) tip = `Good: the box shrank from ${lastBox} to ${n} squares.`;
+      else if (n > lastBox) tip = `The box grew to ${n} squares. Keep the queen closer, a knight’s jump from the king.`;
+      else tip = n <= 6 ? 'Box is small: bring your king up to help.' : 'Same size. Look for a queen move that cuts off more.';
+      if (n <= 2) tip += ' Careful: never take the last square without giving check (stalemate).';
+      boxNote.replaceChildren(h('b', `Box: ${n} square${n === 1 ? '' : 's'}`), ` · ${tip}`);
+      lastBox = n;
     }
 
     function end(success: boolean, why: string): void {
@@ -604,7 +657,7 @@ const mountEndgame =
           return true;
         }
       }
-      if (ex.goal === 'mate' && countPieces(f, myQueen) === 0 && countPieces(f, me === 'w' ? 'R' : 'r') === 0) {
+      if (ex.goal === 'mate' && heavyAtStart && countPieces(f, myQueen) === 0 && countPieces(f, myRook) === 0) {
         end(false, `Your ${countPieces(fen, myQueen) ? 'queen' : 'rook'} was captured: with a bare king it’s a draw. Keep it protected or a safe distance away.`);
         return true;
       }

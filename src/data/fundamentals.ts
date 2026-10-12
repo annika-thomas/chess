@@ -147,6 +147,15 @@ export const mateWithQueen: Lesson = {
       { fen: 'k7/8/1Q6/8/8/8/8/K7 b - - 0 1', side: 'w' },
     ),
     endgame({
+      prompt: 'Guided: shrink the box. The shaded squares are where the king can still go; make them fewer each move.',
+      fens: ['8/8/8/4k3/8/8/8/4K2Q w - - 0 1', '8/8/3k4/8/8/8/8/Q3K3 w - - 0 1', '8/2k5/8/8/8/8/8/3QK3 w - - 0 1'],
+      side: 'w',
+      goal: 'mate',
+      limit: 25,
+      guide: 'box',
+      explain: 'Each queen move should take squares away. Once the king is on the edge with two or three squares left, walk your king up, then mate.',
+    }),
+    endgame({
       prompt: 'Checkmate the king with your queen. The engine defends perfectly.',
       fens: ['8/8/8/4k3/8/8/8/4K2Q w - - 0 1', '8/8/3k4/8/8/8/8/Q3K3 w - - 0 1', '8/2k5/8/8/8/8/8/3QK3 w - - 0 1'],
       side: 'w',
@@ -371,6 +380,140 @@ export const opposition: Lesson = {
       goal: 'hold',
       limit: 20,
       explain: 'Stay directly in front of the pawn. When the white king comes forward, step into opposition. If you hold the opposition, it’s a draw.',
+    }),
+  ],
+};
+
+// ───────────── Finishing ─────────────
+
+export const ladderMate: Lesson = {
+  id: 'mate-ladder',
+  title: 'The ladder mate',
+  goal: 'Two heavy pieces mate without your king',
+  tags: ['mate', 'endgame'],
+  exercises: [
+    info(
+      'With **two heavy pieces** (two rooks, a rook and a queen, or two queens) you don’t need your king. One piece **cuts off a rank**, the other **checks on the next one**. The king is pushed back a rank at a time, like climbing down a ladder, until it hits the edge.',
+      { title: 'The ladder', fen: '8/8/8/3k4/8/8/R7/1R4K1 w - - 0 1', side: 'w', arrows: [arrow('a2', 'a4', 'green'), arrow('b1', 'b5', 'green')] },
+    ),
+    find('w', '', ['Rb8#'], 'Your rook on a7 already guards the 7th rank. Mate in one.', '**Rb8#**: the a7 rook takes the 7th rank, the b8 rook checks on the 8th. That’s the last rung of the ladder.', {
+      fen: '6k1/R7/8/8/8/8/8/1R4K1 w - - 0 1',
+      tags: ['mate'],
+    }),
+    choice(
+      'In a ladder mate the enemy king walks up to attack one of your rooks. What do you do?',
+      [
+        yes('Slide that rook to the far side of the same rank', 'Right: it keeps cutting off the rank, out of the king’s reach. Then carry on with the ladder.'),
+        no('Defend it with your king', 'That works too, but it’s slow. The point of the ladder is that your king isn’t needed.'),
+        no('Give a check with it straight away', 'A check that lets the king step back up undoes your work. Keep the rank cut off.'),
+      ],
+      { fen: '8/8/8/8/2k5/1R6/R7/6K1 w - - 0 1', side: 'w' },
+    ),
+    endgame({
+      prompt: 'Queen and rook against a lone king. Use the ladder: no king needed.',
+      fens: ['8/8/3k4/8/8/8/8/QR2K3 w - - 0 1'],
+      side: 'w',
+      goal: 'mate',
+      limit: 10,
+      explain: 'One piece cuts off a rank, the other checks on the next. If the king attacks a piece, move it to the far side and continue.',
+    }),
+    endgame({
+      prompt: 'You’ve promoted a second queen. Two queens against a lone king: mate fast.',
+      fens: ['8/8/4k3/8/8/8/8/QQ2K3 w - - 0 1'],
+      side: 'w',
+      goal: 'mate',
+      limit: 8,
+      explain: 'Two queens ladder even faster than two rooks. In your games you often made a third queen instead of mating with two: this is the shortcut.',
+    }),
+  ],
+};
+
+export const finishTheJob: Lesson = {
+  id: 'finish-job',
+  title: 'Finish the job',
+  goal: 'From winning to checkmate, quickly',
+  tags: ['mate', 'endgame'],
+  exercises: [
+    info(
+      'A won position isn’t won until it’s mate. Once you’re far ahead: **1. Stop grabbing material**: look for **checks** first. **2. Bring your pieces** (and your king) to the enemy king. **3. Don’t make more queens** if the ones you have can mate. **4. Leave the king a square** until the final move, or it’s stalemate.\n\nThe drills here are positions from **your own games**, where you had a forced mate in 3–7 moves.',
+      { title: 'Winning isn’t won yet' },
+    ),
+    choice(
+      'You’re a queen up and the enemy king is exposed. What do you look for first?',
+      [
+        yes('Checks that drive the king toward the edge', 'Yes. Forcing moves leave the opponent no time, and they usually lead to mate.'),
+        no('More material to grab', 'You already have plenty. Grabbing gives the opponent time to defend or counterattack.'),
+        no('A pawn to push to a new queen', 'Slow. A queen you already have can usually do the job in a few moves.'),
+      ],
+      { tags: ['mate'] },
+    ),
+    endgame({
+      prompt: 'From your game: mate in 3 was available. Find it against the engine.',
+      fens: ['rnQ3nr/4kppp/ppp5/8/1P1P4/2N2N2/1PP2PPP/R1BQKB1R w KQ - 0 11', 'k7/3N4/2b1R3/8/1P2B1P1/6P1/P7/6K1 w - - 11 45'],
+      side: 'w',
+      goal: 'mate',
+      limit: 6,
+      explain: 'Look for checks first, and count which squares the king can still reach.',
+    }),
+    endgame({
+      prompt: 'From your game: a forced mate was there. Checks first, and bring every piece.',
+      fens: [
+        '1Q3Q2/2p5/r1k1p2p/b7/8/6P1/2P2P1P/6K1 w - - 1 37',
+        'r1bNkb1r/p3p3/5p1p/2P1n1p1/P5N1/8/1PPBQPPP/R3KB1R w KQkq - 0 16',
+        '1n1k4/N7/2P5/1P2Bpp1/5P2/7p/P2N2PP/4K3 w - - 0 36',
+      ],
+      side: 'w',
+      goal: 'mate',
+      limit: 12,
+      explain: 'Mate needs your pieces near the king. Every move should check, take a square away, or bring another piece in.',
+    }),
+  ],
+};
+
+// ───────────── Safety ─────────────
+
+export const captureCheck: Lesson = {
+  id: 'capture-check',
+  title: 'Before you capture',
+  goal: 'Who takes back, and what does it leave open?',
+  tags: ['blunder-check'],
+  exercises: [
+    info(
+      'Captures feel safe because you gain something. Most game-losing blunders are captures, though. Before you take, ask: **1. Who takes back?** Count attackers and defenders. **2. What does my capture open up?** A line to your king, or a piece left undefended. **3. Is there something better?** A check that leads to mate beats a pawn.\n\nEvery position in this lesson is from **your own games**.',
+      { title: 'Captures need a safety check too' },
+    ),
+    choice(
+      'Your queen on f4 can take the knight on f5. Should it?',
+      [
+        yes('No: the bishop on c8 takes back, and you lose your queen for a knight', 'Right. The knight is defended by the c8 bishop along the diagonal. Always ask “who takes back?”'),
+        no('Yes: a free knight', 'It isn’t free: the c8 bishop defends f5. After Qxf5 Bxf5 you’ve traded your queen (9) for a knight (3).'),
+        no('Yes: queens should trade for knights when they can', 'A queen is worth about three knights. Only take if nothing can take back.'),
+      ],
+      { fen: 'r1b1kb1r/2q3pp/1pp5/p2pPnB1/2B2Q2/8/PPP2PPP/RN3RK1 w kq - 2 12', side: 'w', arrows: [arrow('c8', 'f5', 'red')], tags: ['blunder-check'] },
+    ),
+    choice(
+      'Black’s bishop just jumped to h3. Should you take it with gxh3?',
+      [
+        yes('No: taking opens the f3 pawn and Black has ...Qxf3 mate', 'Exactly. After gxh3 the black queen on f7 takes on f3 with checkmate. In your game this capture lost on the spot.'),
+        no('Yes: it’s a free bishop', 'Check what the capture changes: the g-pawn no longer guards f3, and the f7 queen is aiming at it.'),
+        no('Yes, but only because the bishop attacks g2', 'Still no. Look at the queen on f7 and the f-file.'),
+      ],
+      { fen: 'r4rk1/5qpp/2P5/1Bb1P1B1/8/1PN2P1b/P5PP/R3RK2 w - - 3 24', side: 'w', arrows: [arrow('f7', 'f3', 'red')], tags: ['blunder-check', 'mate'] },
+    ),
+    find('w', '', ['Re1'], 'You’re far ahead and Black’s king is in the open. Qxe6+ grabs a pawn with check, but look at what recaptures. Find a stronger move.', '**Re1** (or Rc5+ or g3) leads to a forced mate. **Qxe6+?** loses the queen to ...Bxe6: the c8 bishop guards e6. In your game this turned a mating attack into a long fight.', {
+      fen: '1rb2b1r/ppR2Q2/4p3/4k3/2B3p1/2N1n3/PPP3PP/R5K1 w - - 0 19',
+      accept: ['Rc5+', 'g3'],
+      tags: ['blunder-check', 'mate'],
+    }),
+    find('w', '', ['Rxh7'], 'Rc5+ looks forcing, but count the defenders of c5 first. Find a move that wins material safely.', '**Rxh7** takes a whole rook (Bxh7 works too). **Rc5+?** loses the rook to ...Bxc5: the f8 bishop covers c5.', {
+      fen: '1r3b2/ppR4r/4b3/4k3/6p1/2NBn3/PPP3PP/R5K1 w - - 2 21',
+      accept: ['Bxh7'],
+      tags: ['blunder-check'],
+    }),
+    find('w', '', ['bxa6'], 'Before you make a plan, look at everything that’s attacked. Something big is hanging.', '**bxa6** wins the queen: your b5 pawn attacks a6. In your game you played Ne5 and missed it.', {
+      fen: 'rnb1kb1r/p1p1pp2/q4npp/1P6/1P6/2N2NP1/2P1BP1P/R1BQ1RK1 w kq - 1 15',
+      accept: ['Rxa6'],
+      tags: ['blunder-check', 'hanging'],
     }),
   ],
 };

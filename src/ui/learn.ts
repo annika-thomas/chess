@@ -3,7 +3,7 @@ import { currentStep, lessonComplete, levelReadyForTest, levelUnlocked, practice
 import { getSet, PASS } from '../engine/puzzles';
 import { runPuzzleSet } from './puzzleRun';
 import { advise, buildReview, buildUnitReview, buildWeakSpotDrill, isLessonDone, isUnlocked, unitStrength } from '../engine/coach';
-import { currentStreak, state, xpToday } from '../engine/store';
+import { currentStreak, NEW_PER_DAY, newLessonsToday, state, xpToday } from '../engine/store';
 import type { Lesson } from '../types';
 import { bossFor, type Boss } from '../data/bosses';
 import { sheet, startSession } from './app';
@@ -90,7 +90,8 @@ function lessonSheet(ref: LessonRef): void {
   const open = isUnlocked(ref);
   const practice = ref.lesson.practice;
   const needsPractice = done && practice && !practiceMastered(practice);
-  const go = h(`button.btn.${needsPractice ? 'ghost' : 'primary'}.wide`, { type: 'button' }, done ? 'Redo the lesson (+XP)' : 'Start lesson');
+  const capped = !done && newLessonsToday() >= NEW_PER_DAY;
+  const go = h(`button.btn.${needsPractice || capped ? 'ghost' : 'primary'}.wide`, { type: 'button' }, done ? 'Redo the lesson (+XP)' : capped ? 'Start anyway' : 'Start lesson');
   const set = practice ? h(`button.btn.${needsPractice ? 'primary' : 'ghost'}.wide`, { type: 'button', disabled: !done }, done ? 'Practice set' : 'Practice set (after the lesson)') : null;
   const content = h(
     'div.lesson-sheet',
@@ -98,6 +99,9 @@ function lessonSheet(ref: LessonRef): void {
     h('h2', ref.lesson.title),
     h('p', ref.lesson.goal),
     practice ? h('p.muted', icon('target'), ` Practice set: ${setStatus(practice)}`) : null,
+    capped && open
+      ? h('p.cap-note', `You’ve learned ${NEW_PER_DAY} new lessons today. New patterns stick better with practice in between, so this one is best saved for tomorrow.`)
+      : null,
     open
       ? h('div.stack', set && needsPractice ? set : null, go, set && !needsPractice ? set : null)
       : h('p.muted', icon('lock'), ' Locked. Finish the lessons before it, including their practice sets. A coach wouldn’t skip you ahead, and the patterns build on each other.'),

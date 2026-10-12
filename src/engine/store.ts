@@ -285,6 +285,15 @@ export function completeLesson(id: string, mistakes: number, now = Date.now()): 
   };
 }
 
+/** New lessons a day: learning more at once crowds out the practice that makes patterns stick. */
+export const NEW_PER_DAY = 2;
+
+/** Lessons finished for the first time today. */
+export function newLessonsToday(now = Date.now()): number {
+  const day = today(now);
+  return Object.values(state.lessons).filter((l) => today(l.completedAt) === day).length;
+}
+
 /** Record that a piece of homework was done today (e.g. "review", "set:mate1", "lesson:mate-one"). */
 export function markHomework(key: string, now = Date.now()): void {
   const day = today(now);

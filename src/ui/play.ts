@@ -378,7 +378,7 @@ function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss, s
         return;
       }
     }
-    if (state.play.guard && !boss) void guard(prev.fen(), san);
+    if (state.play.guard && !boss && !slow) void guard(prev.fen(), san);
     else setTimeout(botTurn, 250);
   }
 

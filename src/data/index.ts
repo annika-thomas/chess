@@ -21,6 +21,9 @@ import {
   removeDefender,
   rookMate,
   safetyCheck,
+  captureCheck,
+  ladderMate,
+  finishTheJob,
   skewer,
 } from './fundamentals';
 
@@ -51,16 +54,16 @@ const level1: Unit[] = [
     section: L1,
     color: '#6f8f4e',
     icon: 'icon:shield',
-    lessons: [withPractice(lesson(old, 'tactics-values'), 'hanging'), safetyCheck, lesson(old, 'survive-blunder')],
+    lessons: [withPractice(lesson(old, 'tactics-values'), 'hanging'), safetyCheck, captureCheck, lesson(old, 'survive-blunder')],
   },
   {
     id: 'checkmate',
     title: 'Checkmate',
-    subtitle: 'Escaping check, mating patterns, mating with the queen',
+    subtitle: 'Escaping check, mating patterns, and finishing won games',
     section: L1,
     color: '#7b3f3f',
     icon: '♛',
-    lessons: [checkEscape, mateInOne, backRank, lesson(old, 'survive-scholar'), mateWithQueen],
+    lessons: [checkEscape, mateInOne, backRank, lesson(old, 'survive-scholar'), mateWithQueen, ladderMate, finishTheJob],
   },
   { ...principles, section: L1, lessons: [...principles.lessons, lesson(old, 'survive-f7')] },
   {
