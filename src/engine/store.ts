@@ -1,6 +1,7 @@
 import { newCard, review, type Card, type Grade } from './srs';
 import type { FindExercise, Side } from '../types';
 import { START, type Rating } from './rating';
+import type { PuzzleRecord } from './puzzles';
 
 export interface Profile {
   name: string;
@@ -159,6 +160,8 @@ export interface State {
   homework: Homework;
   /** Paused puzzle-set runs by set id. */
   runs: Record<string, SavedRun>;
+  /** Your history on each puzzle, so runs can bring back misses and skip what you've just seen. */
+  puzzles: Record<string, PuzzleRecord>;
 }
 
 const KEY = 'chess-mentor.v1';
@@ -196,6 +199,7 @@ function fresh(): State {
     bosses: {},
     homework: { day: '', plan: [], done: [] },
     runs: {},
+    puzzles: {},
   };
 }
 

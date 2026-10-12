@@ -19,6 +19,8 @@ export interface PuzzleSet {
   about: string;
   /** A follow-up set: opens once this set is passed. */
   after?: string;
+  /** Lichess theme the set trains (practice sets only). */
+  theme?: string;
   puzzles: Puzzle[];
 }
 
@@ -29,6 +31,12 @@ interface SetsFile {
 }
 
 let loading: Promise<Map<string, PuzzleSet>> | null = null;
+let loaded: Map<string, PuzzleSet> | null = null;
+/** The sets, if already loaded (for synchronous lookups). */
+export const loadedSets = () => loaded;
+export function useSets(sets: PuzzleSet[]): void {
+  loaded = new Map(sets.map((s) => [s.id, s]));
+}
 const titles = new Map<string, string>();
 
 /** A set's title once the file has loaded (falls back to its id). */
@@ -43,7 +51,8 @@ export function loadSets(): Promise<Map<string, PuzzleSet>> {
     })
     .then((f) => {
       for (const s of f.sets) titles.set(s.id, s.title);
-      return new Map(f.sets.map((s) => [s.id, s]));
+      loaded = new Map(f.sets.map((s) => [s.id, s]));
+      return loaded;
     })
     .catch((e) => {
       loading = null;
@@ -69,3 +78,83 @@ export interface SetRun {
 export const accuracy = (r: SetRun) => (r.total ? r.correct / r.total : 0);
 export const avgSeconds = (r: SetRun) => (r.total ? r.seconds / r.total : 0);
 export const isFluent = (r: SetRun) => accuracy(r) >= FLUENT.accuracy && avgSeconds(r) <= FLUENT.seconds;
+
+// ───────────────────────── Fresh runs: draw each run from a theme pool ─────────────────────────
+
+/** What each practice set trains, for sets built before the file recorded it. */
+const THEMES: Record<string, string> = {
+  hanging: 'hangingPiece',
+  mate1: 'mateIn1',
+  backrank: 'backRankMate',
+  'fork-1': 'fork',
+  'fork-2': 'fork',
+  'fork-3': 'fork',
+  pin: 'pin',
+  skewer: 'skewer',
+  discovered: 'discoveredAttack',
+  'double-check': 'doubleCheck',
+  defender: 'capturingDefender',
+  mate2: 'mateIn2',
+  f7: 'attackingF2F7',
+};
+
+export const themeOf = (set: PuzzleSet): string | undefined => set.theme ?? THEMES[set.id] ?? THEMES[set.id.replace(/-2$/, '')];
+
+/** Sets whose puzzles must stay unseen: tests and mixed reviews are assessments. */
+const reserved = (s: PuzzleSet) => s.id.includes('test') || s.id.startsWith('mix');
+
+/** Every puzzle with the set's theme and a similar rating: the set's own plus matching ones from other sets. */
+export function themePool(set: PuzzleSet, all: Iterable<PuzzleSet> = loaded?.values() ?? []): Puzzle[] {
+  const theme = themeOf(set);
+  if (!theme || !set.puzzles.length) return set.puzzles.slice();
+  const ratings = set.puzzles.map((p) => p.rating);
+  const lo = Math.min(...ratings) - 100;
+  const hi = Math.max(...ratings) + 100;
+  const pool = new Map(set.puzzles.map((p) => [p.id, p]));
+  for (const other of all) {
+    if (other.id === set.id || reserved(other)) continue;
+    for (const p of other.puzzles) if (p.themes.includes(theme) && p.rating >= lo && p.rating <= hi) pool.set(p.id, p);
+  }
+  return [...pool.values()];
+}
+
+/** How you've done on one puzzle. */
+export interface PuzzleRecord {
+  seen: number;
+  wrong: number;
+  /** Result of the latest attempt. */
+  lastOk: boolean;
+  last: number;
+  /** Seconds on the latest attempt. */
+  secs: number;
+}
+
+export const RUN_SIZE = 25;
+
+/**
+ * Choose a run: puzzles you missed last time first (up to a third of the run), then ones you haven't
+ * seen, then the ones seen longest ago. Practice runs go roughly easy to hard, with jitter so the order
+ * can't be memorized; other runs are shuffled.
+ */
+export function pickRun(pool: Puzzle[], history: Record<string, PuzzleRecord>, opts: { size?: number; ordered?: boolean; rand?: () => number } = {}): Puzzle[] {
+  const size = opts.size ?? RUN_SIZE;
+  const rand = opts.rand ?? Math.random;
+  const shuffle = <T>(a: T[]) => {
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
+  const missed = shuffle(pool.filter((p) => history[p.id] && !history[p.id].lastOk));
+  const unseen = shuffle(pool.filter((p) => !history[p.id]));
+  const solved = pool.filter((p) => history[p.id]?.lastOk).sort((a, b) => history[a.id].last - history[b.id].last);
+  const run = missed.slice(0, Math.ceil(size / 3));
+  for (const p of [...unseen, ...missed.slice(run.length), ...solved]) {
+    if (run.length >= size) break;
+    if (!run.includes(p)) run.push(p);
+  }
+  if (!opts.ordered) return shuffle(run);
+  const jitter = new Map(run.map((p) => [p.id, p.rating + (rand() - 0.5) * 300]));
+  return run.sort((a, b) => jitter.get(a.id)! - jitter.get(b.id)!);
+}

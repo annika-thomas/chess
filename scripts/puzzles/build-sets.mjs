@@ -122,7 +122,7 @@ stream.on('end', () => {
     }
     chosen.sort((a, b) => a.r - b.r);
     kept += chosen.length;
-    sets.push({ id: def.id, title: def.title, about: def.about, ...(def.after ? { after: def.after } : {}), puzzles: chosen.map(toPuzzle) });
+    sets.push({ id: def.id, title: def.title, about: def.about, ...(def.after ? { after: def.after } : {}), ...(!def.test && def.any.length === 1 ? { theme: def.any[0] } : {}), puzzles: chosen.map(toPuzzle) });
     console.log(`${def.id.padEnd(14)} ${String(chosen.length).padStart(3)} / ${def.size}`);
   }
   console.log(`scanned ${rows} puzzles in ${((Date.now() - t0) / 1000).toFixed(0)}s, kept ${kept}`);

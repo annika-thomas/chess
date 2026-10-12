@@ -2211,3 +2211,36 @@ cg-board square.mentor-target {
 .pause-card .stack {
   margin-top: 20px;
 }
+
+/* ── Puzzle solution review ── */
+.review-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px 0;
+}
+.review-bar[hidden] {
+  display: none;
+}
+.review-bar .nav-btn {
+  flex: none;
+  width: 48px;
+  padding: 9px 0;
+}
+.review-bar .small-btn {
+  flex: 1;
+  padding: 9px 6px;
+  font-size: 14px;
+}
+.step-label {
+  flex: none;
+  min-width: 74px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+.puzzle-feedback .idea {
+  margin-top: 4px;
+  color: var(--text2);
+  font-size: 14px;
+}

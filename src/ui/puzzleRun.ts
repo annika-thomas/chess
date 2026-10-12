@@ -1,6 +1,6 @@
 import { Chess } from 'chess.js';
 import type { Key } from '@lichess-org/chessground/types';
-import { accuracy, avgSeconds, FLUENT, isFluent, PASS, type Puzzle, type PuzzleSet, type SetRun } from '../engine/puzzles';
+import { accuracy, avgSeconds, FLUENT, isFluent, loadedSets, PASS, pickRun, themeOf, themePool, type Puzzle, type PuzzleSet, type SetRun } from '../engine/puzzles';
 import { addXp, markHomework, save, state, type SavedRun } from '../engine/store';
 import type { Side } from '../types';
 import { render, sheet } from './app';
@@ -26,6 +26,41 @@ export interface SetOpts {
 }
 
 const uciOf = (m: { from: string; to: string; promotion?: string }) => m.from + m.to + (m.promotion ?? '');
+
+/** Plain names for the Lichess themes worth pointing out after a miss. */
+const IDEAS: Record<string, string> = {
+  fork: 'Fork',
+  pin: 'Pin',
+  skewer: 'Skewer',
+  discoveredAttack: 'Discovered attack',
+  doubleCheck: 'Double check',
+  capturingDefender: 'Removing the defender',
+  hangingPiece: 'Free piece',
+  backRankMate: 'Back-rank mate',
+  smotheredMate: 'Smothered mate',
+  mateIn1: 'Mate in one',
+  mateIn2: 'Mate in two',
+  mateIn3: 'Mate in three',
+  attackingF2F7: 'Attack on f7/f2',
+  deflection: 'Deflection',
+  attraction: 'Decoy',
+  trappedPiece: 'Trapped piece',
+  interference: 'Interference',
+  intermezzo: 'In-between move',
+  xRayAttack: 'X-ray',
+  sacrifice: 'Sacrifice',
+  clearance: 'Clearance',
+  quietMove: 'Quiet move',
+  promotion: 'Promotion',
+  exposedKing: 'Exposed king',
+};
+const ideasOf = (p: Puzzle) => p.themes.map((t) => IDEAS[t]).filter(Boolean).slice(0, 3);
+
+/** The solution as SAN, from the puzzle position. */
+function solutionSans(p: Puzzle): string[] {
+  const c = new Chess(p.fen);
+  return p.moves.map((u) => c.move({ from: u.slice(0, 2), to: u.slice(2, 4), promotion: u[4] ?? 'q' }).san);
+}
 
 function shuffled<T>(a: T[]): T[] {
   const b = a.slice();
@@ -68,10 +103,21 @@ export function runPuzzleSet(o: SetOpts): void {
   const root = document.getElementById('app')!;
   clear(root);
   document.body.classList.add('locked');
-  const byId = new Map(o.set.puzzles.map((p) => [p.id, p]));
+  const byId = new Map<string, Puzzle>();
+  for (const s of loadedSets()?.values() ?? []) for (const p of s.puzzles) byId.set(p.id, p);
+  for (const p of o.set.puzzles) byId.set(p.id, p);
   const fromIds = (ids: string[]) => ids.map((id) => byId.get(id)).filter((p): p is Puzzle => !!p);
-  // Tests and cycles shuffle so position order can't be memorized; practice keeps the easy-to-hard order.
-  const queue = o.resume ? fromIds(o.resume.queue) : (o.only ?? (o.mode === 'practice' ? o.set.puzzles.slice() : shuffled(o.set.puzzles)));
+  // Practice and speed runs draw a fresh 25 from the theme's pool each time, so you learn the pattern,
+  // not the answers: misses come back first, then unseen puzzles. Tests and mixes shuffle their own set.
+  const fresh = (o.mode === 'practice' || o.mode === 'cycle') && !!themeOf(o.set);
+  const queue = o.resume
+    ? fromIds(o.resume.queue)
+    : (o.only ??
+      (fresh
+        ? pickRun(themePool(o.set), state.puzzles, { ordered: o.mode === 'practice' })
+        : o.mode === 'practice'
+          ? o.set.puzzles.slice()
+          : shuffled(o.set.puzzles)));
   let i = o.resume?.index ?? 0;
   let correct = o.resume?.correct ?? 0;
   let seconds = o.resume?.seconds ?? 0;
@@ -95,6 +141,14 @@ export function runPuzzleSet(o: SetOpts): void {
   const feedback = h('div.puzzle-feedback');
   const next = h('button.btn.primary', { type: 'button' }, 'Next');
   next.hidden = true;
+  // After a miss: step through the solution, watch it again, or try it yourself (not scored).
+  const stepBack = h('button.btn.ghost.nav-btn', { type: 'button', 'aria-label': 'Previous move' }, icon('prev'));
+  const stepFwd = h('button.btn.ghost.nav-btn', { type: 'button', 'aria-label': 'Next move' }, icon('next'));
+  const replayBtn = h('button.btn.ghost.small-btn', { type: 'button' }, icon('play'), ' Replay');
+  const tryBtn = h('button.btn.ghost.small-btn', { type: 'button' }, icon('undo'), ' Try it');
+  const stepLabel = h('span.step-label');
+  const reviewBar = h('div.review-bar', stepBack, stepLabel, stepFwd, replayBtn, tryBtn);
+  reviewBar.hidden = true;
   root.append(
     h(
       'div.session.game.puzzles',
@@ -103,6 +157,7 @@ export function runPuzzleSet(o: SetOpts): void {
       turn,
       board.el,
       feedback,
+      reviewBar,
       h('div.game-controls', next),
     ),
   );
@@ -120,6 +175,8 @@ export function runPuzzleSet(o: SetOpts): void {
     busy = false;
     resolved = false;
     next.hidden = true;
+    review = null;
+    reviewBar.hidden = true;
     clear(feedback);
     const side = new Chess(p.fen).turn() as Side;
     board.setOrientation(side);
@@ -137,6 +194,7 @@ export function runPuzzleSet(o: SetOpts): void {
   }
 
   function onMove(uci: string): boolean {
+    if (review?.trying) return onTryMove(uci);
     if (busy || failed) return false;
     const p = queue[i];
     const expected = p.moves[j];
@@ -163,11 +221,111 @@ export function runPuzzleSet(o: SetOpts): void {
     failed = true;
     resolved = true;
     seconds += (Date.now() - started) / 1000;
+    record(p, false, (Date.now() - started) / 1000);
     missed.push(p);
     sound.wrong();
     board.setInteractive(false);
-    feedback.replaceChildren(h('div.verdict.bad', icon('close'), ' Not this time. Here’s the solution.'));
-    playOut(p, j);
+    const ideas = ideasOf(p);
+    feedback.replaceChildren(
+      h('div.verdict.bad', icon('close'), ' Not this time. Watch the solution.'),
+      ideas.length ? h('div.idea', 'Idea: ', h('b', ideas.join(' · '))) : '',
+    );
+    next.hidden = false;
+    // Let the wrong move snap back first, then replay from the start.
+    timer = window.setTimeout(() => startReview(p), 350);
+    return false;
+  }
+
+  // ── Solution review ──
+  let review: { p: Puzzle; sans: string[]; k: number; trying: boolean; tj: number } | null = null;
+
+  function startReview(p: Puzzle): void {
+    review = { p, sans: solutionSans(p), k: 0, trying: false, tj: 0 };
+    reviewBar.hidden = false;
+    watch();
+  }
+
+  /** Show the position after k solution moves, with an arrow for the move that comes next. */
+  function showStep(k: number): void {
+    if (!review) return;
+    const { p, sans } = review;
+    review.k = Math.max(0, Math.min(sans.length, k));
+    board.load(sans.slice(0, review.k), p.fen);
+    if (review.k === 0 && p.last) board.sync([p.last.slice(0, 2), p.last.slice(2, 4)] as Key[]);
+    const nextUci = p.moves[review.k];
+    board.arrows(nextUci ? [{ from: nextUci.slice(0, 2), to: nextUci.slice(2, 4), color: review.k % 2 === 0 ? 'green' : 'red' }] : []);
+    stepLabel.textContent = review.k === sans.length ? 'Solved position' : review.k === 0 ? 'Start' : `Move ${review.k} of ${sans.length}`;
+    (stepBack as HTMLButtonElement).disabled = review.k === 0;
+    (stepFwd as HTMLButtonElement).disabled = review.k === sans.length;
+  }
+
+  /** Play the whole solution slowly from the start. */
+  function watch(): void {
+    if (!review) return;
+    clearTimeout(timer);
+    review.trying = false;
+    board.setInteractive(false);
+    showStep(0);
+    const tick = () => {
+      if (!review || review.trying || review.k >= review.sans.length) return;
+      timer = window.setTimeout(() => {
+        if (!review || review.trying) return;
+        showStep(review.k + 1);
+        tick();
+      }, 1200);
+    };
+    timer = window.setTimeout(tick, 600);
+  }
+
+  stepBack.addEventListener('click', () => {
+    if (!review) return;
+    clearTimeout(timer);
+    review.trying = false;
+    board.setInteractive(false);
+    showStep(review.k - 1);
+  });
+  stepFwd.addEventListener('click', () => {
+    if (!review) return;
+    clearTimeout(timer);
+    review.trying = false;
+    board.setInteractive(false);
+    showStep(review.k + 1);
+  });
+  replayBtn.addEventListener('click', watch);
+  tryBtn.addEventListener('click', () => {
+    if (!review) return;
+    clearTimeout(timer);
+    showStep(0);
+    board.arrows([]);
+    review.trying = true;
+    review.tj = 0;
+    stepLabel.textContent = 'Your turn (not scored)';
+    board.setInteractive(true);
+  });
+
+  /** A practice attempt at a missed puzzle: same rules, no score. */
+  function onTryMove(uci: string): boolean {
+    const r = review!;
+    const mate = board.chess.isCheckmate();
+    if (uci === r.p.moves[r.tj] || mate) {
+      r.tj++;
+      if (mate || r.tj >= r.p.moves.length) {
+        sound.correct();
+        board.setInteractive(false);
+        r.trying = false;
+        stepLabel.textContent = 'Got it! (not scored)';
+        return true;
+      }
+      board.setInteractive(false);
+      timer = window.setTimeout(() => {
+        playUci(r.p.moves[r.tj]);
+        r.tj++;
+        board.setInteractive(true);
+      }, 380);
+      return true;
+    }
+    sound.wrong();
+    stepLabel.textContent = 'Not that one. Try again, or replay it.';
     return false;
   }
 
@@ -178,36 +336,30 @@ export function runPuzzleSet(o: SetOpts): void {
     board.play(mv.san);
   }
 
-  /** Animate the rest of the solution so the idea is always seen. */
-  function playOut(p: Puzzle, from: number): void {
-    let k = from;
-    const step = () => {
-      if (k >= p.moves.length) {
-        next.hidden = false;
-        return;
-      }
-      const uci = p.moves[k];
-      board.arrows([{ from: uci.slice(0, 2), to: uci.slice(2, 4), color: k % 2 === 0 ? 'green' : 'red' }]);
-      timer = window.setTimeout(() => {
-        playUci(uci);
-        k++;
-        timer = window.setTimeout(step, 450);
-      }, 650);
-    };
-    timer = window.setTimeout(step, 400);
-  }
-
   function solved(): void {
     const t = (Date.now() - started) / 1000;
     seconds += t;
     correct++;
     resolved = true;
+    record(queue[i], true, t);
     board.setInteractive(false);
     sound.correct();
     feedback.replaceChildren(h('div.verdict.good', icon('check'), ` Solved in ${t.toFixed(1)}s`));
     next.hidden = false;
     // Keep momentum in timed runs.
     if (o.mode === 'cycle') timer = window.setTimeout(advance, 700);
+  }
+
+  /** Remember how this puzzle went (retries of a miss don't overwrite the miss). */
+  function record(p: Puzzle, ok: boolean, secs: number): void {
+    const prev = state.puzzles[p.id];
+    state.puzzles[p.id] = {
+      seen: (prev?.seen ?? 0) + 1,
+      wrong: (prev?.wrong ?? 0) + (ok ? 0 : 1),
+      lastOk: ok,
+      last: Date.now(),
+      secs: Math.round(secs * 10) / 10,
+    };
   }
 
   function advance(): void {

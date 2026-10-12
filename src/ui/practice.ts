@@ -15,7 +15,7 @@ import { state } from '../engine/store';
 import { go, startSession } from './app';
 import { h } from './dom';
 import { icon, unitIcon } from './icons';
-import { loadSets, PASS, type PuzzleSet } from '../engine/puzzles';
+import { loadSets, PASS, RUN_SIZE, themeOf, themePool, type PuzzleSet } from '../engine/puzzles';
 import { runPuzzleSet } from './puzzleRun';
 import { setUnlocked } from '../engine/levels';
 import type { Side } from '../types';
@@ -34,7 +34,7 @@ function setRow(set: PuzzleSet): HTMLElement {
   const status = !open
     ? 'Locked: reach this in the course first'
     : !rec
-      ? `${set.puzzles.length} puzzles · not started`
+      ? `${themeOf(set) ? `${RUN_SIZE} per run, from ${themePool(set).length}` : `${set.puzzles.length} puzzles`} · not started`
       : rec.mastered
         ? `Mastered · best ${Math.round(rec.bestAccuracy * 100)}%${rec.bestSeconds ? ` at ${rec.bestSeconds.toFixed(0)}s` : ''}${rec.fluentRuns ? ` · fluent ×${rec.fluentRuns}` : ''}`
         : `Best ${Math.round(rec.bestAccuracy * 100)}% · need ${Math.round(PASS * 100)}%`;
