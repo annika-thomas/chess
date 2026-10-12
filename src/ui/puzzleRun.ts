@@ -20,6 +20,8 @@ export interface SetOpts {
   full?: Puzzle[];
   /** Continue a run that was paused and saved. */
   resume?: SavedRun;
+  /** A short note shown before the first puzzle (e.g. why mixed practice feels harder). */
+  intro?: string;
   /** Show the theme name as a hint (off for tests and mixed sets). */
   hint?: string;
   onFinish?: (run: SetRun, passed: boolean) => void;
@@ -119,6 +121,7 @@ export function runPuzzleSet(o: SetOpts): void {
           ? o.set.puzzles.slice()
           : shuffled(o.set.puzzles)));
   let i = o.resume?.index ?? 0;
+  const firstIndex = i;
   let correct = o.resume?.correct ?? 0;
   let seconds = o.resume?.seconds ?? 0;
   let started = 0;
@@ -178,6 +181,7 @@ export function runPuzzleSet(o: SetOpts): void {
     review = null;
     reviewBar.hidden = true;
     clear(feedback);
+    if (o.intro && i === firstIndex) feedback.append(h('div.intro-note', icon('bulb'), ' ', o.intro));
     const side = new Chess(p.fen).turn() as Side;
     board.setOrientation(side);
     board.load([], p.fen);

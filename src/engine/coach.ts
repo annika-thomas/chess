@@ -1,7 +1,7 @@
 import { CARDS, LESSONS, cardRef, lessonRef, type CardRef, type LessonRef } from '../data';
 import type { Exercise } from '../types';
 import { isDue, retrievability } from './srs';
-import { currentStep, lessonUnlocked, repertoireOpen } from './levels';
+import { currentStep, lessonUnlocked, repertoireOpen, setAvailable } from './levels';
 import { LEVELS } from '../data';
 import { currentStreak, NEW_PER_DAY, newLessonsToday, state, xpToday } from './store';
 
@@ -23,6 +23,7 @@ export const TAG_LABELS: Record<string, string> = {
   pawns: 'Weak & passed pawns',
   bishops: 'Good & bad bishops',
   space: 'Space',
+  convert: 'Converting won positions',
   notation: 'Reading notation',
   center: 'Controlling the center',
   development: 'Developing pieces',
@@ -319,7 +320,7 @@ export function advise(now = Date.now()): Advice {
   if (next && newLessonsToday(now) >= NEW_PER_DAY) {
     // Enough new material for one day: steer to practice that makes it stick.
     const speed = Object.entries(state.sets)
-      .filter(([id, r]) => r.mastered && id !== 'daily' && !id.includes('test'))
+      .filter(([id, r]) => r.mastered && id !== 'daily' && id !== 'mixed' && !id.includes('test') && setAvailable(id))
       .sort(([, a], [, b]) => a.fluentRuns - b.fluentRuns || a.lastAt - b.lastAt)[0];
     return {
       headline: `${NEW_PER_DAY} new lessons today: now make them stick`,

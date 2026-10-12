@@ -1,3 +1,4 @@
+import { Chess } from 'chess.js';
 /**
  * Puzzle sets (from the Lichess puzzle database, CC0). Each puzzle is stored ready to play:
  * `fen` is the position you solve, `last` the opponent move that led to it (for highlighting),
@@ -157,4 +158,46 @@ export function pickRun(pool: Puzzle[], history: Record<string, PuzzleRecord>, o
   if (!opts.ordered) return shuffle(run);
   const jitter = new Map(run.map((p) => [p.id, p.rating + (rand() - 0.5) * 300]));
   return run.sort((a, b) => jitter.get(a.id)! - jitter.get(b.id)!);
+}
+
+// ───────────────────────── Mixed practice and conversion ─────────────────────────
+
+/** Practice sets whose theme you've passed: their pools feed mixed, unlabelled practice. */
+export function masteredThemeSets(mastered: (id: string) => boolean, all: Iterable<PuzzleSet> = loaded?.values() ?? []): PuzzleSet[] {
+  return [...all].filter((s) => themeOf(s) && mastered(s.id));
+}
+
+/** Unlabelled pool: every puzzle from the themes you've passed, plus the daily pool. */
+export function mixedPool(mastered: (id: string) => boolean, all: PuzzleSet[] = [...(loaded?.values() ?? [])]): Puzzle[] {
+  const pool = new Map<string, Puzzle>();
+  for (const s of masteredThemeSets(mastered, all)) for (const p of themePool(s, all)) pool.set(p.id, p);
+  const daily = all.find((s) => s.id === 'daily');
+  const maxRating = Math.max(1000, ...[...pool.values()].map((p) => p.rating));
+  for (const p of daily?.puzzles ?? []) if (p.rating <= maxRating) pool.set(p.id, p);
+  return [...pool.values()];
+}
+
+const VALUE: Record<string, number> = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
+
+/**
+ * Winning positions to convert: the end of a solved puzzle (not a mate), where the solver is up at least
+ * `minGain` points of material. The opponent is to move, as in a game right after your combination.
+ */
+export function conversionPositions(pool: Puzzle[], minGain = 3): Array<{ fen: string; side: 'w' | 'b'; id: string }> {
+  const out: Array<{ fen: string; side: 'w' | 'b'; id: string }> = [];
+  for (const p of pool) {
+    if (p.themes.some((t) => t.startsWith('mate'))) continue;
+    const c = new Chess(p.fen);
+    const side = c.turn();
+    try {
+      for (const u of p.moves) c.move({ from: u.slice(0, 2), to: u.slice(2, 4), promotion: u[4] });
+    } catch {
+      continue;
+    }
+    if (c.isGameOver()) continue;
+    let diff = 0;
+    for (const row of c.board()) for (const sq of row) if (sq) diff += (sq.color === side ? 1 : -1) * VALUE[sq.type];
+    if (diff >= minGain) out.push({ fen: c.fen(), side, id: p.id });
+  }
+  return out;
 }

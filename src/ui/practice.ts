@@ -2,6 +2,7 @@ import { UNITS } from '../data';
 import {
   buildGameDrills,
   buildPatternSprint,
+  buildPositionalDrill,
   buildReview,
   buildUnitReview,
   buildWeakSpotDrill,
@@ -20,6 +21,7 @@ import { runPuzzleSet } from './puzzleRun';
 import { repertoireOpen, setUnlocked } from '../engine/levels';
 import type { Side } from '../types';
 import { topBar } from './learn';
+import { MIXED_SIZE, mixedAvailable, startConvert, startMixed, startPositional } from './drills';
 
 function card(title: string, body: string, cta: string, onClick: () => void, opts: { accent?: string; disabled?: boolean } = {}): HTMLElement {
   const btn = h('button.btn.primary', { type: 'button', disabled: opts.disabled }, cta);
@@ -108,6 +110,36 @@ export function renderPractice(host: HTMLElement): void {
       due ? `Review ${due}` : 'Practice anyway',
       () => startSession('Daily review', buildReview(), 'practice', undefined, 'review'),
       { accent: '#6f8f4e', disabled: !learnedAny },
+    ),
+  );
+
+  // The three drills the research says matter most at this stage: mixed recognition, placement, conversion.
+  const mixedN = mixedAvailable();
+  host.append(
+    card(
+      'Mixed puzzles',
+      mixedN >= 10
+        ? `${MIXED_SIZE} unlabelled puzzles from every theme you’ve passed, misses first. Harder than themed sets, and closer to a real game.`
+        : 'Pass a few themed puzzle sets first; their puzzles then come back here, mixed.',
+      'Start',
+      () => void startMixed(),
+      { accent: '#6f8f4e', disabled: mixedN < 10 },
+    ),
+    card(
+      'Convert the win',
+      'You’ve just won material. Stay clearly winning for 10 moves against a human-like opponent, or mate.',
+      'Play it out',
+      () => void startConvert(),
+      { accent: '#7b3f3f', disabled: mixedN < 10 },
+    ),
+    card(
+      'Positional practice',
+      buildPositionalDrill().length
+        ? 'Worst pieces, open files, outposts, weak pawns: mixed questions from your Piece Placement lessons.'
+        : 'Unlocks with the Piece Placement lessons in Level 2.',
+      'Practice',
+      () => void startPositional(),
+      { accent: '#3f6e7b', disabled: !buildPositionalDrill().length },
     ),
   );
 

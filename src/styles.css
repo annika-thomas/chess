@@ -2279,3 +2279,12 @@ cg-board square.mentor-target {
 .level-up .md p {
   margin: 0 0 8px;
 }
+
+.intro-note {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--card);
+  border-left: 4px solid var(--gold);
+  font-size: 14px;
+  color: var(--text2);
+}

@@ -48,3 +48,28 @@ describe('fresh practice runs', () => {
     expect(firstHalf).toBeLessThan(secondHalf);
   });
 });
+
+describe('mixed practice and conversion positions', () => {
+  it('mixes every passed theme, and only passed themes', async () => {
+    const { mixedPool } = await import('../src/engine/puzzles');
+    const passed = new Set(['hanging', 'fork-1']);
+    const pool = mixedPool((id) => passed.has(id), sets);
+    const themes = new Set(pool.flatMap((p) => p.themes));
+    expect(themes.has('fork')).toBe(true);
+    expect(themes.has('hangingPiece')).toBe(true);
+    expect(pool.length).toBeGreaterThan(100); // with the daily pool
+    expect(mixedPool(() => false, sets).length).toBeLessThan(pool.length);
+  });
+
+  it('finds winning positions to convert, with the opponent to move', async () => {
+    const { conversionPositions, mixedPool } = await import('../src/engine/puzzles');
+    const { Chess } = await import('chess.js');
+    const positions = conversionPositions(mixedPool(() => true, sets));
+    expect(positions.length).toBeGreaterThan(50);
+    for (const p of positions.slice(0, 40)) {
+      const c = new Chess(p.fen);
+      expect(c.turn()).not.toBe(p.side);
+      expect(c.isGameOver()).toBe(false);
+    }
+  });
+});

@@ -122,11 +122,15 @@ export interface EndgameExercise extends BaseExercise {
   /** Start positions; one is picked at random each time. */
   fens: string[];
   side: Side;
-  goal: 'mate' | 'promote' | 'hold';
+  goal: 'mate' | 'promote' | 'hold' | 'keep';
   limit: number;
   explain: string;
   /** Coaching overlay: 'box' shades the squares the enemy king can still reach. */
   guide?: 'box';
+  /** For 'keep': engine evaluation (centipawns, your side) you must still have after `limit` moves. */
+  keep?: number;
+  /** Opponent bot level (human-like, makes mistakes). Default: the engine's best defence. */
+  opponent?: number;
 }
 
 /** Tap a square: "tap your worst piece", "tap the outpost". Answers are curated, then checked with an engine. */

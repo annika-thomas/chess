@@ -3,7 +3,7 @@ import { formatMoves, parseLine, sameSan, sideToMove, squaresFor } from '../engi
 import type { Grade } from '../engine/srs';
 import { addXp, completeLesson, currentStreak, gradeCard, logAnswer, markHomework, recordTags, save, state, xpToday } from '../engine/store';
 import type { ChoiceExercise, EndgameExercise, Exercise, FindExercise, GradeExercise, InfoExercise, RecallExercise, SquareExercise, TapExercise, WalkExercise } from '../types';
-import { engine, judgeMove, winPct } from '../engine/bot';
+import { botMove, engine, evaluate, judgeMove, levelById, lossLabel, winPct } from '../engine/bot';
 import { Chess } from 'chess.js';
 import { Board, pawnSkeleton } from './board';
 import { clear, figHtml, h, inline, md, shuffle } from './dom';
@@ -578,7 +578,9 @@ const mountEndgame =
         ? `checkmate within ${ex.limit} moves`
         : ex.goal === 'promote'
           ? `promote and keep your new queen (${ex.limit} moves)`
-          : `stop the pawn for ${ex.limit} moves`;
+          : ex.goal === 'keep'
+            ? `stay clearly winning for ${ex.limit} moves, or mate`
+            : `stop the pawn for ${ex.limit} moves`;
     }
     function updateStatus(): void {
       status.textContent = `Move ${myMoves} / ${ex.limit}`;
@@ -683,6 +685,10 @@ const mountEndgame =
         });
         return;
       }
+      if (myMoves >= ex.limit && ex.goal === 'keep') {
+        void judgeKeep();
+        return;
+      }
       if (myMoves >= ex.limit) {
         if (ex.goal === 'hold') end(true, `You held for ${ex.limit} moves.`);
         else end(false, `Move limit reached (${ex.limit}).`);
@@ -693,13 +699,35 @@ const mountEndgame =
       });
     }
 
+    /** After the last move of a 'keep' drill: is the position still clearly winning? */
+    async function judgeKeep(): Promise<void> {
+      board.setInteractive(false);
+      status.textContent = 'Engine judging…';
+      try {
+        // It's the opponent's move, so flip the sign to get your side's view.
+        const mine = -(await evaluate(board.chess.fen(), 12));
+        const need = ex.keep ?? 300;
+        if (mine >= need) end(true, `Still clearly winning after ${ex.limit} moves (${lossLabel(mine)} ahead by the engine’s count).`);
+        else if (mine > 0) end(false, `Still better, but the win slipped: only ${lossLabel(mine)} ahead now.`);
+        else end(false, 'The advantage is gone.');
+      } catch {
+        end(false, 'The engine couldn’t start. Try reopening the app.');
+      }
+    }
+
     async function reply(): Promise<void> {
       board.setInteractive(false);
-      status.textContent = 'Engine thinking…';
+      status.textContent = ex.opponent ? 'Opponent thinking…' : 'Engine thinking…';
       try {
-        const [best] = await engine.analyse(board.chess.fen(), { depth: 12, multipv: 1 });
-        if (over || !best) return;
-        const mv = new Chess(board.chess.fen()).move({ from: best.move.slice(0, 2), to: best.move.slice(2, 4), promotion: best.move[4] ?? 'q' });
+        let uci: string;
+        if (ex.opponent) uci = await botMove(board.chess.fen(), levelById(ex.opponent));
+        else {
+          const [best] = await engine.analyse(board.chess.fen(), { depth: 12, multipv: 1 });
+          if (!best) return;
+          uci = best.move;
+        }
+        if (over) return;
+        const mv = new Chess(board.chess.fen()).move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] ?? 'q' });
         board.play(mv.san);
       } catch {
         end(false, 'The engine couldn’t start. Try reopening the app.');
