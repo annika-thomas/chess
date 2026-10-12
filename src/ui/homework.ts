@@ -10,9 +10,10 @@ import { lessonItems, openSet, startLesson } from './learn';
 import { startSprint } from './practice';
 import { runPuzzleSet } from './puzzleRun';
 import { annotateGame } from './annotate';
+import { startConvert, startMixed, startPositional } from './drills';
 import { reviewGame, startSlowGame } from './play';
 
-function runTask(key: string): void {
+export function runTask(key: string): void {
   const [kind, id] = key.split(':');
   const missing = () => alert('This puzzle set isn’t available yet: the puzzle library is still being imported.');
   switch (kind) {
@@ -36,7 +37,21 @@ function runTask(key: string): void {
       void getSet(id).then((set) => (set ? runPuzzleSet({ set, mode: 'cycle' }) : missing()));
       return;
     case 'daily':
-      void getSet('daily').then((set) => (set ? runPuzzleSet({ set, mode: 'test', only: dailyBatch(set.puzzles) }) : missing()));
+      // Warm-up: easy puzzles first, for a quick feeling of competence before the harder work.
+      void getSet('daily').then((set) =>
+        set
+          ? runPuzzleSet({ set, mode: 'test', only: dailyBatch(set.puzzles.filter((p) => p.rating <= 1100)).sort((a, b) => a.rating - b.rating) })
+          : missing(),
+      );
+      return;
+    case 'mixed':
+      if (!startMixed()) missing();
+      return;
+    case 'positional':
+      void startPositional();
+      return;
+    case 'convert':
+      if (!startConvert()) missing();
       return;
     case 'endgame': {
       const ref = lessonRef(id);

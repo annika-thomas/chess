@@ -2,15 +2,17 @@ import { UNITS, LESSONS, LEVELS, isCard, type LessonRef } from '../data';
 import { currentStep, lessonComplete, levelReadyForTest, levelUnlocked, practiceMastered } from '../engine/levels';
 import { getSet, PASS } from '../engine/puzzles';
 import { runPuzzleSet } from './puzzleRun';
-import { advise, buildReview, buildUnitReview, buildWeakSpotDrill, isLessonDone, isUnlocked, unitStrength } from '../engine/coach';
+import { buildUnitReview, isLessonDone, isUnlocked, unitStrength } from '../engine/coach';
 import { currentStreak, NEW_PER_DAY, newLessonsToday, state, xpToday } from '../engine/store';
 import type { Lesson } from '../types';
 import { bossFor, type Boss } from '../data/bosses';
 import { sheet, startSession } from './app';
 import { recommendedLevel, startBoss } from './play';
-import { h, md } from './dom';
+import { clear, h, md } from './dom';
 import { icon, unitIcon } from './icons';
-import { homeworkCard } from './homework';
+import { homeworkCard, runTask } from './homework';
+import { todaysPlan } from '../engine/homework';
+import { candidates, launch } from './next';
 
 export function lessonItems(lesson: Lesson) {
   return lesson.exercises.map((exercise, i) => ({
@@ -45,17 +47,50 @@ export function topBar(title: string): HTMLElement {
   );
 }
 
+/**
+ * One button for "what should I do now": the next unfinished homework task, then (homework done) the best next
+ * activity from "Up next", with a reason and the option to pick something else.
+ */
 function coachCard(): HTMLElement {
-  const a = advise();
-  const btn = h('button.btn.primary', { type: 'button', disabled: a.action.kind === 'done' }, a.cta);
-  btn.addEventListener('click', () => {
-    const act = a.action;
-    if (act.kind === 'lesson') startLesson(act.ref);
-    else if (act.kind === 'review') startSession('Daily review', buildReview(), 'practice', undefined, 'review');
-    else if (act.kind === 'weak') startSession(act.spot.label, buildWeakSpotDrill(act.spot.tag), 'practice');
-    else if (act.kind === 'set') openSet(act.setId);
-  });
-  return h('section.coach', h('div.avatar', '♞'), h('div.coach-body', h('h2', a.headline), h('p', a.body), btn));
+  const card = h('section.coach');
+  const tasks = todaysPlan();
+  const pending = tasks.find((t) => !t.done);
+  let alt = 0;
+  const draw = () => {
+    clear(card);
+    const go = h('button.btn.primary', { type: 'button' }, 'Go');
+    let headline: string;
+    let body: string;
+    let other: HTMLElement | null = null;
+    if (pending) {
+      const done = tasks.filter((t) => t.done).length;
+      headline = `Up next: ${pending.title}`;
+      body = `${pending.detail ? pending.detail + '. ' : ''}Homework ${done} of ${tasks.length} done.`;
+      go.addEventListener('click', () => runTask(pending.key));
+    } else {
+      const list = candidates();
+      const a = list[alt % Math.max(1, list.length)];
+      if (!a) {
+        headline = 'All caught up';
+        body = 'Nothing needs doing. Come back tomorrow for new homework.';
+        (go as HTMLButtonElement).disabled = true;
+      } else {
+        headline = `${tasks.length ? 'Homework done. ' : ''}Up next: ${a.title}`;
+        body = a.why;
+        go.addEventListener('click', () => launch(a));
+        if (list.length > 1) {
+          other = h('button.link-btn.other-btn', { type: 'button' }, 'Something else');
+          other.addEventListener('click', () => {
+            alt++;
+            draw();
+          });
+        }
+      }
+    }
+    card.append(h('div.avatar', '♞'), h('div.coach-body', h('h2', headline), h('p', body), h('div.coach-actions', go, other)));
+  };
+  draw();
+  return card;
 }
 
 /** Open a puzzle set: practice first, then timed reruns once it's mastered. Tests and mixes get no theme hint. */

@@ -2288,3 +2288,15 @@ cg-board square.mentor-target {
   font-size: 14px;
   color: var(--text2);
 }
+
+.coach-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.other-btn {
+  font-size: 14px;
+  color: var(--muted);
+  text-decoration: underline;
+}

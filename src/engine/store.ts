@@ -177,6 +177,8 @@ export interface State {
   puzzles: Record<string, PuzzleRecord>;
   /** Recent answers to lesson and review questions (newest last). */
   answers: AnswerLog[];
+  /** What "Up next" last sent you to, so it can vary the next pick. */
+  lastActivity?: { kind: string; at: number };
 }
 
 const KEY = 'chess-mentor.v1';

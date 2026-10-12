@@ -24,7 +24,7 @@ describe('daily homework plan', () => {
     expect(buildPlan(NOW)).toEqual(['sprint', 'lesson:basics-grid']);
   });
 
-  it('assigns the practice set before the next lesson, plus review, a speed run and an endgame drill', () => {
+  it('assigns review, the practice set before the next lesson, and an endgame drill to finish', () => {
     setAvailableSets(['mate1', 'hanging']);
     state.lessons = done([...BASICS, 'tactics-values', 'safety-check', 'capture-check', 'survive-blunder', 'check-escape', 'mate-one', 'mate-queen']);
     state.sprintBest = { w: 20, b: 12 };
@@ -33,7 +33,7 @@ describe('daily homework plan', () => {
     const plan = buildPlan(NOW);
     expect(plan[0]).toBe('review');
     expect(plan).toContain('set:mate1'); // mate-one's practice set is the current step
-    expect(plan).toContain('speed:hanging');
+    expect(plan).not.toContain('speed:hanging'); // labelled re-runs gave way to mixed practice
     expect(plan).toContain('endgame:mate-queen');
     expect(plan).not.toContain('sprint');
   });

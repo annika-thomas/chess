@@ -44,7 +44,7 @@ export function masterCards(): HTMLElement {
   );
 }
 
-function startGuess(g: MasterGame): void {
+export function startGuess(g: MasterGame): void {
   const root = document.getElementById('app')!;
   clear(root);
   document.body.classList.add('locked');

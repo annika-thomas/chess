@@ -1,7 +1,7 @@
 import { LESSONS, LEVELS, lessonRef } from '../data';
-import { dueCards, gameDrillsDue } from './coach';
+import { buildPositionalDrill, dueCards, gameDrillsDue } from './coach';
 import { currentStep, levelUnlocked, setAvailable, setsLoaded } from './levels';
-import { setTitle } from './puzzles';
+import { mixedPool, setTitle } from './puzzles';
 import { save, state, today, type PlayedGame } from './store';
 
 /**
@@ -25,6 +25,7 @@ export interface Task {
 export function doneKey(key: string): string {
   if (key.startsWith('speed:') || key.startsWith('mix:')) return `set:${key.split(':')[1]}`;
   if (key === 'daily') return 'set:daily';
+  if (key === 'mixed') return 'set:mixed';
   return key;
 }
 
@@ -34,39 +35,40 @@ const dayNumber = (now: number) => Math.floor((now - new Date(now).getTimezoneOf
 
 /** Choose today's tasks. Pure apart from reading state, so it's easy to test. */
 export function buildPlan(now = Date.now()): string[] {
+  // About 30 minutes, shaped as the research suggests: an easy warm-up, the effortful core (curriculum,
+  // mixed puzzles, positional practice), and a play-out to finish (Heisman's splits; flow/competence research).
   const keys: string[] = [];
   const learnedCards = Object.keys(state.cards).length > 0;
   if (learnedCards || Object.keys(state.drills).length) keys.push('review');
 
-  // Board fluency first: a quick coordinate sprint until it's automatic.
+  const mastered = (id: string) => !!state.sets[id]?.mastered;
+  const anyPassed = Object.entries(state.sets).some(([id, r]) => r.mastered && setAvailable(id));
+
+  // Warm-up: board fluency until it's automatic, then a few easy mixed puzzles.
   if (!state.lessons['basics-reading'] || Math.max(state.sprintBest.w, state.sprintBest.b) < 15) keys.push('sprint');
+  else if (setAvailable('daily') && anyPassed) keys.push('daily');
 
   // The main course: whatever the curriculum needs next.
   const step = currentStep();
-  let stepSet: string | undefined;
-  if (step && 'test' in step) {
-    stepSet = LEVELS[step.test].test!;
-    keys.push(`set:${stepSet}`);
-  } else if (step?.needs === 'practice') {
-    stepSet = step.ref.lesson.practice!;
-    keys.push(`set:${stepSet}`);
-  } else if (step) keys.push(`lesson:${step.ref.lesson.id}`);
+  if (step && 'test' in step) keys.push(`set:${LEVELS[step.test].test!}`);
+  else if (step?.needs === 'practice') keys.push(`set:${step.ref.lesson.practice!}`);
+  else if (step) keys.push(`lesson:${step.ref.lesson.id}`);
 
-  // Woodpecker: re-run a set you've passed, aiming for speed. Least fluent, longest ago first.
-  const speed = Object.entries(state.sets)
-    .filter(([id, r]) => r.mastered && id !== stepSet && id !== 'daily' && setAvailable(id))
-    .sort(([, a], [, b]) => a.fluentRuns - b.fluentRuns || a.lastAt - b.lastAt)[0];
-  if (speed) keys.push(`speed:${speed[0]}`);
+  // Mixed, unlabelled tactics: the honest test of recognition (interleaving research).
+  if (mixedPool(mastered).length >= 10) keys.push('mixed');
+  else {
+    const mixLevel = LEVELS.findIndex((l, i) => l.mix && setAvailable(l.mix) && levelUnlocked(i + 1) && !state.sets[LEVELS[i + 1]?.test ?? '']?.mastered);
+    if (mixLevel >= 0) keys.push(`mix:${LEVELS[mixLevel].mix}`);
+  }
 
-  // One endgame drill you've learned, rotating day by day.
+  // Positional practice once you've had a Piece Placement lesson.
+  if (buildPositionalDrill(1, now).length) keys.push('positional');
+
+  // Finish with play: conversion of a won position, alternating with an endgame drill you've learned.
   const endgames = ENDGAME_LESSONS.filter((l) => state.lessons[l.lesson.id]);
-  if (endgames.length) keys.push(`endgame:${endgames[dayNumber(now) % endgames.length].lesson.id}`);
-
-  // Mixed, unlabelled review of the previous level while you work through the next one.
-  const mixLevel = LEVELS.findIndex((l, i) => l.mix && setAvailable(l.mix) && levelUnlocked(i + 1) && !state.sets[LEVELS[i + 1]?.test ?? '']?.mastered);
-  // Unlabelled practice is where pattern recognition is really tested: both the mix and the daily puzzles.
-  if (mixLevel >= 0) keys.push(`mix:${LEVELS[mixLevel].mix}`);
-  if (setAvailable('daily') && Object.values(state.sets).some((r) => r.mastered)) keys.push('daily');
+  const canConvert = mixedPool(mastered).length >= 10;
+  if (canConvert && (dayNumber(now) % 2 === 0 || !endgames.length)) keys.push('convert');
+  else if (endgames.length) keys.push(`endgame:${endgames[dayNumber(now) % endgames.length].lesson.id}`);
 
   return keys;
 }
@@ -124,7 +126,13 @@ export function describe(key: string): Task {
     case 'mix':
       return t(`Mixed review: ${setTitle(id)}`, `${MIX_SIZE} puzzles with no labels, like a real game: spot which pattern it is`, 6);
     case 'daily':
-      return t('Daily puzzles', `${DAILY_SIZE} mixed puzzles, new every day`, 5);
+      return t('Warm-up puzzles', `${DAILY_SIZE} easy mixed puzzles to get going, new every day`, 5);
+    case 'mixed':
+      return t('Mixed puzzles', '20 unlabelled puzzles from every theme you’ve passed, misses first', 6);
+    case 'positional':
+      return t('Positional practice', 'Worst pieces, open files, outposts and weak pawns, mixed', 5);
+    case 'convert':
+      return t('Convert the win', 'You’ve just won material: stay winning for 10 moves against a human-like opponent', 5);
   }
   return t(key, '', 5);
 }

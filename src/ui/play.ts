@@ -219,6 +219,13 @@ export function startBoss(boss: Boss): void {
   startGame(boss.side, recommendedLevel(), false, boss);
 }
 
+/** A game with your saved Play settings (used by "what's next"). */
+export function startConfiguredGame(): void {
+  const cfg = state.play;
+  const side: Side = cfg.side === 'random' ? (Math.random() < 0.5 ? 'w' : 'b') : cfg.side;
+  startGame(side, levelById(cfg.level), cfg.repertoire);
+}
+
 /** Weekly homework: a slow game at your level, alternating colours week to week. */
 export function startSlowGame(): void {
   const side: Side = Math.round(weekStart() / 604_800_000) % 2 ? 'b' : 'w';
