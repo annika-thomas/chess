@@ -1,14 +1,14 @@
-import { MASTER_GAMES } from '../data/masters';
 import { buildPositionalDrill, buildReview, buildWeakSpotDrill, dueCards, gameDrillsDue, nextLesson, weakSpots } from '../engine/coach';
 import { loadedSets, type Puzzle, type PuzzleSet } from '../engine/puzzles';
 import { newLessonsToday, NEW_PER_DAY, save, state, today } from '../engine/store';
 import { startSession } from './app';
 import { mixedAvailable, startConvert, startMixed } from './drills';
-import { startGuess } from './guess';
+import { nextSegment, startGuess } from './guess';
 import { startLesson } from './learn';
 import { startConfiguredGame } from './play';
 import { runPuzzleSet } from './puzzleRun';
 import { levelById } from '../engine/bot';
+import { mistakeItems } from '../engine/mistakes';
 
 /**
  * "Up next" after homework: one button that picks the best next activity. It scores what you need
@@ -25,7 +25,7 @@ export interface Activity {
   run: () => void;
 }
 
-const EFFORT = new Set(['review', 'weak', 'retry', 'mixed', 'positional', 'lesson']);
+const EFFORT = new Set(['review', 'weak', 'retry', 'mixed', 'positional', 'lesson', 'mistakes']);
 
 function missedPuzzles(): Puzzle[] {
   const byId = new Map<string, Puzzle>();
@@ -52,6 +52,10 @@ export function candidates(now = Date.now()): Activity[] {
     const set: PuzzleSet = { id: 'retry-misses', title: 'Puzzles you missed', about: '', puzzles: misses };
     out.push({ kind: 'retry', title: `Fix ${Math.min(15, misses.length)} puzzles you missed`, why: 'Coming back to a miss after a gap is one of the strongest ways to make a pattern stick.', effort: true, score: 50 + Math.min(20, misses.length), run: () => runPuzzleSet({ set, mode: 'test', only: misses.slice(0, 15) }) });
   }
+  const mine = mistakeItems(8, now);
+  if (mine.length >= 2) {
+    out.push({ kind: 'mistakes', title: `Rewrite ${mine.length} of your own mistakes`, why: 'Positions from your games where you went wrong. The most relevant practice there is.', effort: true, score: 58, run: () => startSession('Your mistakes', mine, 'practice', undefined, 'mistakes') });
+  }
   const playedToday = state.games.some((g) => today(g.date) === today(now));
   const lvl = levelById(state.play.level);
   out.push({ kind: 'game', title: `Play a game vs ${lvl.name} (~${lvl.elo})`, why: playedToday ? 'Another game: real games are where everything comes together.' : 'No game yet today. Games are where the patterns have to show up on their own.', effort: false, score: playedToday ? 30 : 70, run: startConfiguredGame });
@@ -62,8 +66,16 @@ export function candidates(now = Date.now()): Activity[] {
   if (buildPositionalDrill(1, now).length) {
     out.push({ kind: 'positional', title: 'Positional practice', why: 'Where pieces belong when there’s no tactic: worst pieces, files, outposts.', effort: true, score: 48, run: () => startSession('Positional practice', buildPositionalDrill(), 'practice', undefined, 'positional') });
   }
-  const guess = MASTER_GAMES.slice().sort((a, b) => (state.masters[a.id] ? state.masters[a.id].best / state.masters[a.id].max : -1) - (state.masters[b.id] ? state.masters[b.id].best / state.masters[b.id].max : -1))[0];
-  if (guess) out.push({ kind: 'guess', title: `Guess the Move: ${guess.title}`, why: 'Predict a master’s moves and see the plan unfold. Model games are where placement ideas come from.', effort: false, score: 35, run: () => startGuess(guess) });
+  const seg = nextSegment();
+  if (seg)
+    out.push({
+      kind: 'guess',
+      title: `Guess the Move: ${seg.game.title}, moves ${Math.floor(seg.seg.from / 2) + 1}–${Math.floor((seg.seg.to - 1) / 2) + 1}`,
+      why: 'Predict a master’s moves for about 10 moves and see the plan unfold. Model games are where placement ideas come from.',
+      effort: false,
+      score: 35,
+      run: () => startGuess(seg.game, seg.seg),
+    });
   const next = nextLesson();
   if (next && newLessonsToday(now) < NEW_PER_DAY) {
     out.push({ kind: 'lesson', title: `Lesson: ${next.lesson.title}`, why: next.lesson.goal, effort: true, score: 40, run: () => startLesson(next) });

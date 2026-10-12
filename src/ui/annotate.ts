@@ -1,5 +1,6 @@
 import { Chess } from 'chess.js';
-import { isMistake, judgeMove, lossLabel } from '../engine/bot';
+import { isMistake, judgeMove, levelById, lossLabel } from '../engine/bot';
+import { saveMistake } from '../engine/mistakes';
 import { formatMoves } from '../engine/notation';
 import { addXp, markHomework, recordTags, save, state, type Annotation, type PlayedGame } from '../engine/store';
 import { render, sheet } from './app';
@@ -186,6 +187,8 @@ export function annotateGame(g: PlayedGame): void {
   // ── Phase 3: compare, diagnose, set homework ──
   function resultsPhase(): void {
     phase = 'results';
+    // Every real mistake becomes a drill you can retry later ("rewrite the ending").
+    for (const f of flags) saveMistake(g, levelById(g.level).name, f.ply, fens[f.ply], f.best);
     // A mistake counts as spotted if you marked it, or the opponent move just before it.
     const spotted = flags.filter((f) => marks.has(f.ply) || marks.has(f.ply - 1));
     const worst = [...flags].sort((a, b) => b.loss - a.loss).slice(0, 3).sort((a, b) => a.ply - b.ply);

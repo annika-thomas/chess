@@ -38,20 +38,51 @@ export function masterCards(): HTMLElement {
         ),
         rec ? h('span.delta.up', `${Math.round((rec.best / rec.max) * 100)}%`) : h('span.chev', '›'),
       );
-      row.addEventListener('click', () => startGuess(g));
+      row.addEventListener('click', () => chooseSegment(g));
       return row;
     }),
   );
 }
 
-export function startGuess(g: MasterGame): void {
+/** A stretch of a master game: plies [from, to). Short segments keep sessions brief and fit an improver. */
+export interface Segment {
+  from: number;
+  to: number;
+}
+
+const SEGMENT_PLIES = 20;
+const SEGMENT_START = 16; // after the opening (move 9)
+
+export function segmentsOf(g: MasterGame): Segment[] {
+  const n = parseLine(g.line).moves.length;
+  const out: Segment[] = [];
+  for (let from = SEGMENT_START; from < n - 6; from += SEGMENT_PLIES) out.push({ from, to: Math.min(n, from + SEGMENT_PLIES) });
+  return out;
+}
+
+export const segmentKey = (g: MasterGame, seg?: Segment) => (seg ? `${g.id}@${seg.from}` : g.id);
+const moveNo = (ply: number) => Math.floor(ply / 2) + 1;
+
+/** The next segment to play: one you haven't played, else your weakest. */
+export function nextSegment(): { game: MasterGame; seg: Segment } | undefined {
+  const all = MASTER_GAMES.flatMap((game) => segmentsOf(game).map((seg) => ({ game, seg })));
+  const score = (x: { game: MasterGame; seg: Segment }) => {
+    const r = state.masters[segmentKey(x.game, x.seg)];
+    return r ? r.best / Math.max(1, r.max) : -1;
+  };
+  return all.sort((a, b) => score(a) - score(b))[0];
+}
+
+export function startGuess(g: MasterGame, seg?: Segment): void {
   const root = document.getElementById('app')!;
   clear(root);
   document.body.classList.add('locked');
-  const { moves, notes } = parseLine(g.line);
+  const parsed = parseLine(g.line);
+  const notes = parsed.notes;
+  const moves = seg ? parsed.moves.slice(0, seg.to) : parsed.moves;
   const player = g.side === 'w' ? g.white : g.black;
   const short = player.split(' ').pop()!;
-  let i = 0;
+  let i = seg?.from ?? 0;
   let points = 0;
   let max = 0;
   let matched = 0;
@@ -85,6 +116,7 @@ export function startGuess(g: MasterGame): void {
       h('div.game-controls', hint, next),
     ),
   );
+  if (seg) board.load(moves.slice(0, seg.from));
 
   const showScore = () => {
     scoreEl.textContent = max ? `${points}/${max}` : '';
@@ -107,7 +139,16 @@ export function startGuess(g: MasterGame): void {
   };
 
   // Intro card.
-  say(h('div.note', md(`**You are ${player}** (${g.side === 'w' ? 'White' : 'Black'}). ${g.intro}`)));
+  say(
+    h(
+      'div.note',
+      md(
+        seg
+          ? `**You are ${player}** (${g.side === 'w' ? 'White' : 'Black'}), moves ${moveNo(seg.from)}–${moveNo(seg.to - 1)}. Before each guess, ask: which of my pieces is worst, and what does my opponent want?`
+          : `**You are ${player}** (${g.side === 'w' ? 'White' : 'Black'}). ${g.intro}`,
+      ),
+    ),
+  );
   setHint(false);
   setNext('Start', () => advance());
   showScore();
@@ -206,9 +247,10 @@ export function startGuess(g: MasterGame): void {
   function finish(): void {
     setHint(false);
     setNext(null);
-    const prev = state.masters[g.id];
+    const key = segmentKey(g, seg);
+    const prev = state.masters[key];
     const best = Math.max(prev?.best ?? 0, points);
-    state.masters[g.id] = { best, max, plays: (prev?.plays ?? 0) + 1 };
+    state.masters[key] = { best, max, plays: (prev?.plays ?? 0) + 1 };
     addXp(5 + matched);
     save();
     sound.finish();
@@ -223,7 +265,7 @@ export function startGuess(g: MasterGame): void {
         h('h2', title),
         h('div.rating-change', h('b', `${points} / ${max}`), ` · ${pct}%`),
         h('p.muted', `You matched ${matched} of ${guesses} moves.${prev && points > prev.best ? ' New best!' : ''}`),
-        md(g.outro),
+        seg && seg.to < parseLine(g.line).moves.length ? md('The game goes on: play the next segment from the Play tab, or the whole game.') : md(g.outro),
         h('div.stack', done, again),
       ),
     );
@@ -239,7 +281,7 @@ export function startGuess(g: MasterGame): void {
     });
     again.addEventListener('click', () => {
       leave();
-      startGuess(g);
+      startGuess(g, seg);
     });
   }
 
@@ -249,5 +291,31 @@ export function startGuess(g: MasterGame): void {
     board.destroy();
     document.body.classList.remove('locked');
     render();
+  });
+}
+
+/** Pick the whole game or one ~10-move segment. */
+function chooseSegment(g: MasterGame): void {
+  const segs = segmentsOf(g);
+  const whole = h('button.btn.ghost.wide', { type: 'button' }, 'Whole game');
+  const rows = segs.map((seg) => {
+    const rec = state.masters[segmentKey(g, seg)];
+    const b = h(
+      'button.btn.primary.wide',
+      { type: 'button' },
+      `Moves ${moveNo(seg.from)}–${moveNo(seg.to - 1)}${rec ? ` · best ${Math.round((rec.best / Math.max(1, rec.max)) * 100)}%` : ''}`,
+    );
+    b.addEventListener('click', () => {
+      close();
+      startGuess(g, seg);
+    });
+    return b;
+  });
+  const close = sheet(
+    h('div.lesson-sheet', h('h2', g.title), h('p.muted', 'Short segments (about 10 moves) keep it focused. Start after the opening, where the plans are.'), h('div.stack', ...rows, whole)),
+  );
+  whole.addEventListener('click', () => {
+    close();
+    startGuess(g);
   });
 }

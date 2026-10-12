@@ -2,6 +2,7 @@ import { Chess } from 'chess.js';
 import { botMove, engine, evaluate, isMistake, judgeMove, lossLabel, LEVELS, levelById, type Level } from '../engine/bot';
 import { annotatable, weekStart } from '../engine/homework';
 import { repertoireOpen } from '../engine/levels';
+import { findMistakes } from '../engine/mistakes';
 import { annotateGame, uciToSan } from './annotate';
 import type { Boss } from '../data/bosses';
 import { formatMoves, parseLine } from '../engine/notation';
@@ -617,6 +618,20 @@ function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss, s
     const rematch = h('button.btn.primary.wide', { type: 'button' }, boss ? 'Try again' : 'Rematch');
     const review = h('button.btn.ghost.wide', { type: 'button' }, 'Review game');
     const canAnnotate = !boss && annotatable(game);
+    const drillBtn = h('button.btn.ghost.wide', { type: 'button' }, 'Turn my mistakes into drills');
+    const mistakeNote = h('p.muted');
+    drillBtn.addEventListener('click', () => {
+      (drillBtn as HTMLButtonElement).disabled = true;
+      drillBtn.textContent = 'Checking your moves…';
+      findMistakes(game, level.name, (d, n) => (drillBtn.textContent = `Checking your moves… ${d} / ${n}`))
+        .then((found) => {
+          drillBtn.remove();
+          mistakeNote.textContent = found.length
+            ? `${found.length} mistake${found.length > 1 ? 's' : ''} saved as drills: find them in Practice → Your mistakes.`
+            : 'No real mistakes by the engine’s count. Nice game.';
+        })
+        .catch(() => (drillBtn.textContent = 'Couldn’t start the engine'));
+    });
     const annotate = h(`button.btn.${slow ? 'primary' : 'ghost'}.wide`, { type: 'button' }, 'Annotate this game');
     const done = h('button.btn.ghost.wide', { type: 'button' }, 'Done');
     const closeSheet = sheet(
@@ -632,7 +647,7 @@ function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss, s
         lastBookLine ? h('p', `Opening: ${lastBookLine}`) : null,
         drillNote ? md(drillNote) : null,
         slow && !canAnnotate ? md('Short games aren’t worth annotating: this week’s homework needs at least 15 moves each. Play another when you can.') : null,
-        h('div.stack', canAnnotate && slow ? annotate : null, rematch, canAnnotate && !slow ? annotate : null, review, done),
+        h('div.stack', canAnnotate && slow ? annotate : null, rematch, canAnnotate && !slow ? annotate : null, !boss && moves.length >= 16 ? drillBtn : null, mistakeNote, review, done),
       ),
     );
     const leave = () => {

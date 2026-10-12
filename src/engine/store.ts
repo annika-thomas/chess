@@ -181,6 +181,8 @@ export interface State {
   /** What "Up next" last sent you to, so it can vary the next pick. */
   lastActivity?: { kind: string; at: number };
   progress: ProgressPoint[];
+  /** Your own mistakes from games, as drills. */
+  mistakes: Record<string, MistakeDrill>;
 }
 
 const KEY = 'chess-mentor.v1';
@@ -221,6 +223,7 @@ function fresh(): State {
     puzzles: {},
     answers: [],
     progress: [],
+    mistakes: {},
   };
 }
 
@@ -287,6 +290,20 @@ export function addXp(amount: number, now = Date.now()): void {
     state.streak.lastDay = day;
     state.streak.best = Math.max(state.streak.best, state.streak.count);
   }
+}
+
+/** A position from one of your games where you went wrong, to retry as a drill. */
+export interface MistakeDrill {
+  id: string;
+  fen: string;
+  side: Side;
+  /** What you played, and the engine's better move (SAN). */
+  played: string;
+  best: string;
+  opponent: string;
+  /** Move number in the game. */
+  move: number;
+  date: number;
 }
 
 /** Results of unlabelled and conversion practice over time, for progress feedback. */

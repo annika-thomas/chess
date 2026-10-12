@@ -21,6 +21,8 @@ import { runPuzzleSet } from './puzzleRun';
 import { repertoireOpen, setUnlocked } from '../engine/levels';
 import type { Side } from '../types';
 import { topBar } from './learn';
+import { findMistakes, mistakeCount, mistakeItems } from '../engine/mistakes';
+import { levelById } from '../engine/bot';
 import { MIXED_SIZE, mixedAvailable, startConvert, startMixed, startPositional } from './drills';
 
 function card(title: string, body: string, cta: string, onClick: () => void, opts: { accent?: string; disabled?: boolean } = {}): HTMLElement {
@@ -142,6 +144,34 @@ export function renderPractice(host: HTMLElement): void {
       { accent: '#3f6e7b', disabled: !buildPositionalDrill().length },
     ),
   );
+
+  const mistakes = mistakeCount();
+  const recent = state.games.filter((g) => !g.opening?.startsWith('Boss') && g.moves.length >= 16).slice(-3);
+  const mistakesCard = card(
+    'Your mistakes',
+    mistakes
+      ? `${mistakes} position${mistakes > 1 ? 's' : ''} from your own games where you went wrong. Find a better move: any good move counts.`
+      : recent.length
+        ? `I can check your last ${recent.length} game${recent.length > 1 ? 's' : ''} with the engine and turn your real mistakes into drills (takes a minute).`
+        : 'After a game, tap “Turn my mistakes into drills” and they’ll appear here.',
+    mistakes ? 'Rewrite them' : 'Find them',
+    () => {
+      if (mistakes) return startSession('Your mistakes', mistakeItems(), 'practice', undefined, 'mistakes');
+      const btn = mistakesCard.querySelector('button') as HTMLButtonElement;
+      btn.disabled = true;
+      void (async () => {
+        let found = 0;
+        for (const [k, g] of recent.entries()) {
+          btn.textContent = `Game ${k + 1} of ${recent.length}…`;
+          found += (await findMistakes(g, levelById(g.level).name)).length;
+        }
+        btn.textContent = found ? `${found} found` : 'None found';
+        setTimeout(() => go('practice'), 800);
+      })().catch(() => (btn.textContent = 'Couldn’t start the engine'));
+    },
+    { accent: '#8b5a2b', disabled: !mistakes && !recent.length },
+  );
+  host.append(mistakesCard);
 
   host.append(coordinateSprint(), puzzleSets());
 

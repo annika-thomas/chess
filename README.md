@@ -21,6 +21,10 @@ The course is split into levels, like the Steps Method used in Dutch chess schoo
 - **Today's homework** (~30 min): a plan fixed each morning with reviews, the current lesson or set, a speed run of a mastered set, an endgame drill, and mixed or daily puzzles.
 - **Weekly slow game + self-annotation** (Botvinnik school): play a game with no clock, then mark the moments you think mattered and what you were thinking, *before* the engine looks. The engine then flags your real mistakes, shows which ones you spotted, and asks why each happened. Your answers set the next homework and feed your weak spots.
 - **Blunder guard** (optional): warns when your move drops material, without saying why, so you do the safety check yourself.
+- **Up next**: one button on the home screen. It runs the next unfinished homework task, then picks the best next activity (review, weak spots, past misses, your own mistakes, a game, mixed puzzles, conversion, positional practice, Guess the Move), varying it and alternating effortful practice with play.
+- **Piece Placement** (Level 2): where pieces belong when there's no tactic, with tap-the-square and find-a-good-move exercises where any good move counts (checked with Stockfish).
+- **Mixed puzzles, Convert the win, Your mistakes**: unlabelled practice from every passed theme; won positions to play out against a human-like bot; positions from your own games to rewrite.
+- Motivation design: XP for learning signals rather than volume, a forgiving streak, and progress shown as real numbers.
 
 Puzzles come from the [Lichess puzzle database](https://database.lichess.org/#puzzles) (CC0) via `scripts/puzzles/build-sets.mjs`.
 
