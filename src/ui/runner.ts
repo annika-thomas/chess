@@ -565,6 +565,8 @@ const mountEndgame =
       onMove: () => {
         if (over || board.chess.turn() === me) return false;
         myMoves++;
+        board.arrows([]);
+        if (!ex.guide) board.highlight([]);
         updateStatus();
         timer = window.setTimeout(afterMine, 120);
         return true;
@@ -573,6 +575,29 @@ const mountEndgame =
     board.load([], fen);
     host.append(prompt(ex.prompt, `${me === 'w' ? 'White' : 'Black'} to play · ${goalText()}`), h('div.sq-head', h('div'), status), board.el, ex.guide ? boxNote : '');
     ctx.button('Your move', () => undefined, false);
+    // Hints: first the piece to move, then the move itself. Using them still counts, at a lower grade.
+    let hints = 0;
+    let hintFor = '';
+    ctx.secondary('Hint', () => void hint());
+    async function hint(): Promise<void> {
+      if (over || board.chess.turn() !== me) return;
+      const fen = board.chess.fen();
+      if (hintFor !== fen) {
+        hintFor = fen;
+        hintLevel = 0;
+      }
+      try {
+        const [best] = await engine.analyse(fen, { depth: 14, multipv: 1 });
+        if (!best || over || board.chess.fen() !== fen) return;
+        hints++;
+        if (hintLevel === 0) board.highlight([best.move.slice(0, 2)], 'mentor-target');
+        else board.arrows([{ from: best.move.slice(0, 2), to: best.move.slice(2, 4), color: 'green' }]);
+        hintLevel = Math.min(1, hintLevel + 1);
+      } catch {
+        /* engine unavailable: no hint */
+      }
+    }
+    let hintLevel = 0;
 
     function goalText(): string {
       return ex.goal === 'mate'
@@ -639,7 +664,13 @@ const mountEndgame =
       if (over) return;
       over = true;
       board.setInteractive(false);
-      ctx.done({ correct: success, grade: success ? 3 : 1, title: success ? 'Done!' : 'Not this time', detail: `${why}\n\n${ex.explain}` });
+      ctx.secondary(null);
+      ctx.done({
+        correct: success,
+        grade: success ? (hints ? 2 : 3) : 1,
+        title: success ? (hints ? 'Done, with hints' : 'Done!') : 'Not this time',
+        detail: `${why}${hints ? ` (${hints} hint${hints > 1 ? 's' : ''} used: try it again without them later.)` : ''}\n\n${ex.explain}`,
+      });
     }
 
     /** Check goals after any move; returns true if the drill ended. */

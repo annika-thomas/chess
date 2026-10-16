@@ -24,6 +24,7 @@ export const TAG_LABELS: Record<string, string> = {
   bishops: 'Good & bad bishops',
   space: 'Space',
   convert: 'Converting won positions',
+  calculation: 'Thinking ahead',
   notation: 'Reading notation',
   center: 'Controlling the center',
   development: 'Developing pieces',
@@ -152,7 +153,8 @@ export function strengths(limit = 3): WeakSpot[] {
 }
 
 export function buildWeakSpotDrill(tag: string, now = Date.now()): Item[] {
-  const cards = CARDS.filter((c) => c.tags.includes(tag) && (learned(c) || isLessonDone(c.lesson.id)));
+  // Quick questions only: long play-out drills (endgames) belong in their own practice, not a focused drill.
+  const cards = CARDS.filter((c) => c.tags.includes(tag) && c.exercise.type !== 'endgame' && (learned(c) || isLessonDone(c.lesson.id)));
   const ranked = cards.sort((a, b) => {
     const ra = state.cards[a.id] ? retrievability(state.cards[a.id], now) : 0;
     const rb = state.cards[b.id] ? retrievability(state.cards[b.id], now) : 0;

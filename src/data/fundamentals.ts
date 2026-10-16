@@ -1,4 +1,4 @@
-import type { EndgameExercise, Lesson } from '../types';
+import type { EndgameExercise, Lesson, TapExercise } from '../types';
 import { arrow, choice, find, info, no, yes } from './build';
 
 /**
@@ -7,6 +7,7 @@ import { arrow, choice, find, info, no, yes } from './build';
  * that must be passed at 80% (see `practice`). Positions marked with # are checked to be mate in tests.
  */
 const endgame = (o: Omit<EndgameExercise, 'type'>): EndgameExercise => ({ type: 'endgame', ...o });
+const tap = (o: Omit<TapExercise, 'type'>): TapExercise => ({ type: 'tap', ...o });
 
 // ───────────── Level 1 ─────────────
 
@@ -435,7 +436,7 @@ export const finishTheJob: Lesson = {
   tags: ['mate', 'endgame'],
   exercises: [
     info(
-      'A won position isn’t won until it’s mate. Once you’re far ahead: **1. Stop grabbing material**: look for **checks** first. **2. Bring your pieces** (and your king) to the enemy king. **3. Don’t make more queens** if the ones you have can mate. **4. Leave the king a square** until the final move, or it’s stalemate.\n\nThe drills here are positions from **your own games**, where you had a forced mate in 3–7 moves.',
+      'A won position isn’t won until it’s mate. Once you’re far ahead: **1. Stop grabbing material**: look for **checks** first. **2. Bring your pieces** (and your king) to the enemy king. **3. Don’t make more queens** if the ones you have can mate. **4. Leave the king a square** until the final move, or it’s stalemate.\n\nThe drills here are positions from **your own games**, where you had a forced mate in 3–5 moves. Use the hint button if you’re stuck: the point is to see how the pieces work together.',
       { title: 'Winning isn’t won yet' },
     ),
     choice(
@@ -456,15 +457,11 @@ export const finishTheJob: Lesson = {
       explain: 'Look for checks first, and count which squares the king can still reach.',
     }),
     endgame({
-      prompt: 'From your game: a forced mate was there. Checks first, and bring every piece.',
-      fens: [
-        '1Q3Q2/2p5/r1k1p2p/b7/8/6P1/2P2P1P/6K1 w - - 1 37',
-        'r1bNkb1r/p3p3/5p1p/2P1n1p1/P5N1/8/1PPBQPPP/R3KB1R w KQkq - 0 16',
-        '1n1k4/N7/2P5/1P2Bpp1/5P2/7p/P2N2PP/4K3 w - - 0 36',
-      ],
+      prompt: 'From your game: two queens and a forced mate. Checks first, and use both queens.',
+      fens: ['1Q3Q2/2p5/r1k1p2p/b7/8/6P1/2P2P1P/6K1 w - - 1 37'],
       side: 'w',
       goal: 'mate',
-      limit: 12,
+      limit: 10,
       explain: 'Mate needs your pieces near the king. Every move should check, take a square away, or bring another piece in.',
     }),
   ],
@@ -514,6 +511,52 @@ export const captureCheck: Lesson = {
       fen: 'rnb1kb1r/p1p1pp2/q4npp/1P6/1P6/2N2NP1/2P1BP1P/R1BQ1RK1 w kq - 1 15',
       accept: ['Rxa6'],
       tags: ['blunder-check', 'hanging'],
+    }),
+  ],
+};
+
+// ───────────── Calculation ─────────────
+
+const GUIDED = '7k/2B3pp/2b5/q7/8/1Q6/4P1PP/7K w - - 0 1';
+
+export const thinkingAhead: Lesson = {
+  id: 'calc-forcing',
+  title: 'Thinking ahead: checks first',
+  goal: 'How to see two moves deep',
+  tags: ['mate', 'calculation'],
+  exercises: [
+    info(
+      'Nobody sees “mate in 2” all at once. Strong players use a method: **1. List every check you have.** Checks are forcing: the opponent must answer them, so there are only a few replies to think about. **2. For each check, list every reply** (move the king, block, or capture the checker). **3. Look for a move that mates after every reply.** If no check works, try captures, then threats.',
+      { title: 'Forcing moves first' },
+    ),
+    choice(
+      'Step 1: which of these moves is a check?',
+      [yes('Qb8+', 'Yes: the queen checks along the 8th rank.'), no('Qf3', 'That doesn’t attack the king.'), no('Qe6', 'That doesn’t attack the king.')],
+      { fen: GUIDED, side: 'w', tags: ['calculation'] },
+    ),
+    choice(
+      'White has two checks here: Qg8+ and Qb8+. Which one is worth looking at further?',
+      [
+        yes('Qb8+', 'Right. Qg8+ just loses the queen: the king takes it (Kxg8). Checks are only good if the checking piece is safe or the reply is forced.'),
+        no('Qg8+', 'The king simply captures: Kxg8. Always ask “can they take the checking piece?”'),
+        no('Neither', 'Look again at Qb8+: can Black take the queen there?'),
+      ],
+      { fen: GUIDED, side: 'w', tags: ['calculation'] },
+    ),
+    tap({
+      prompt: 'Step 2: after Qb8+, Black must answer the check. The king can’t move. Tap the black piece that can block it.',
+      fen: '1Q5k/2B3pp/2b5/q7/8/8/4P1PP/7K b - - 1 1',
+      side: 'w',
+      answers: ['c6'],
+      explain: 'Only the **c6 bishop** can block, on e8. Black’s king has no squares (g8 is covered by the queen, g7 and h7 are its own pawns).',
+    }),
+    find('w', '', ['Qb8+', 'Be8', 'Qxe8#'], 'Step 3: play it all. Mate in two.', '**Qb8+ Be8 Qxe8#**. Check, the only reply, then mate. That’s the whole method: checks, replies, mate.', {
+      fen: GUIDED,
+      tags: ['mate', 'calculation'],
+    }),
+    find('w', '', ['Qh8+', 'Bd8', 'Qxd8#'], 'Your turn without help: list the checks, then the replies. Mate in two.', '**Qh8+** leaves only **...Bd8** to block, then **Qxd8#**. Same method: the check limits Black to one reply.', {
+      fen: '1k6/ppb5/8/4n3/3N3Q/8/P3PP2/1K6 w - - 0 1',
+      tags: ['mate', 'calculation'],
     }),
   ],
 };

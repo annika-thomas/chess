@@ -57,7 +57,7 @@ describe('mixed practice and conversion positions', () => {
     const themes = new Set(pool.flatMap((p) => p.themes));
     expect(themes.has('fork')).toBe(true);
     expect(themes.has('hangingPiece')).toBe(true);
-    expect(pool.length).toBeGreaterThan(100); // with the daily pool
+    expect(pool.length).toBeGreaterThan(50); // with matching daily puzzles
     expect(mixedPool(() => false, sets).length).toBeLessThan(pool.length);
   });
 
@@ -71,5 +71,28 @@ describe('mixed practice and conversion positions', () => {
       expect(c.turn()).not.toBe(p.side);
       expect(c.isGameOver()).toBe(false);
     }
+  });
+});
+
+describe('mixed practice stays within what you have learned', () => {
+  it('keeps longer combinations out until mate in two is passed, and only learned themes from the daily pool', async () => {
+    const { mixedPool, themeOf } = await import('../src/engine/puzzles');
+    const passed = new Set(['hanging', 'mate1', 'fork-1']);
+    const pool = mixedPool((id) => passed.has(id), sets);
+    const learned = new Set(['hangingPiece', 'mateIn1', 'fork']);
+    for (const p of pool) {
+      expect(p.moves.length, p.id).toBeLessThanOrEqual(3);
+      expect(p.themes.some((t) => learned.has(t)), `${p.id} ${p.themes.join(',')}`).toBe(true);
+    }
+    expect(themeOf(sets.find((s) => s.id === 'mate2')!)).toBe('mateIn2');
+  });
+
+  it('adapts difficulty to recent accuracy', async () => {
+    const { adaptPool, mixedPool } = await import('../src/engine/puzzles');
+    const pool = mixedPool(() => true, sets);
+    const avg = (ps: { rating: number }[]) => ps.reduce((a, p) => a + p.rating, 0) / ps.length;
+    expect(avg(adaptPool(pool, 0.6))).toBeLessThan(avg(pool));
+    expect(avg(adaptPool(pool, 0.95))).toBeGreaterThan(avg(pool));
+    expect(adaptPool(pool, 0.82)).toBe(pool);
   });
 });

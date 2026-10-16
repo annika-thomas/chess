@@ -1,6 +1,6 @@
 import type { Item } from '../engine/coach';
 import { buildPositionalDrill } from '../engine/coach';
-import { conversionPositions, loadedSets, mixedPool, pickRun, type PuzzleSet } from '../engine/puzzles';
+import { adaptPool, conversionPositions, loadedSets, mixedPool, pickRun, type PuzzleSet } from '../engine/puzzles';
 import { state } from '../engine/store';
 import type { EndgameExercise } from '../types';
 import { startSession } from './app';
@@ -25,8 +25,11 @@ export function mixedAvailable(): number {
 export function startMixed(size = MIXED_SIZE): boolean {
   const pool = mixedPool(mastered);
   if (pool.length < 10) return false;
+  const recent = state.progress.filter((p) => p.kind === 'mixed').slice(-3);
+  const total = recent.reduce((a, p) => a + p.total, 0);
+  const acc = total ? recent.reduce((a, p) => a + p.correct, 0) / total : undefined;
   const set: PuzzleSet = { id: MIXED_ID, title: 'Mixed puzzles', about: 'Every pattern you’ve learned, unlabelled', puzzles: pool };
-  runPuzzleSet({ set, mode: 'test', only: pickRun(pool, state.puzzles, { size }), intro: WHY_HARDER });
+  runPuzzleSet({ set, mode: 'test', only: pickRun(adaptPool(pool, acc), state.puzzles, { size }), intro: WHY_HARDER });
   return true;
 }
 

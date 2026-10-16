@@ -169,12 +169,30 @@ export function masteredThemeSets(mastered: (id: string) => boolean, all: Iterab
 
 /** Unlabelled pool: every puzzle from the themes you've passed, plus the daily pool. */
 export function mixedPool(mastered: (id: string) => boolean, all: PuzzleSet[] = [...(loaded?.values() ?? [])]): Puzzle[] {
+  const passed = masteredThemeSets(mastered, all);
+  const themes = new Set(passed.map((s) => themeOf(s)!));
+  // Longer combinations (3+ of your own moves) wait until you've learned to calculate a mate in two.
+  const maxLen = mastered('mate2') ? 5 : 3;
+  const fits = (p: Puzzle) => p.moves.length <= maxLen;
   const pool = new Map<string, Puzzle>();
-  for (const s of masteredThemeSets(mastered, all)) for (const p of themePool(s, all)) pool.set(p.id, p);
+  for (const s of passed) for (const p of themePool(s, all)) if (fits(p)) pool.set(p.id, p);
   const daily = all.find((s) => s.id === 'daily');
   const maxRating = Math.max(1000, ...[...pool.values()].map((p) => p.rating));
-  for (const p of daily?.puzzles ?? []) if (p.rating <= maxRating) pool.set(p.id, p);
+  // Daily puzzles only if they use a pattern you've learned.
+  for (const p of daily?.puzzles ?? []) if (p.rating <= maxRating && fits(p) && p.themes.some((t) => themes.has(t))) pool.set(p.id, p);
   return [...pool.values()];
+}
+
+/**
+ * Keep mixed practice in the productive zone (roughly 75–90% success; Wilson et al. 2019 as a rule of thumb):
+ * after low recent scores draw from the easier part of the pool, after high scores from the harder part.
+ */
+export function adaptPool(pool: Puzzle[], recentAccuracy: number | undefined): Puzzle[] {
+  if (recentAccuracy === undefined || pool.length < 40) return pool;
+  const sorted = pool.slice().sort((a, b) => a.rating - b.rating);
+  if (recentAccuracy < 0.75) return sorted.slice(0, Math.ceil(sorted.length * 0.6));
+  if (recentAccuracy > 0.9) return sorted.slice(Math.floor(sorted.length * 0.4));
+  return pool;
 }
 
 const VALUE: Record<string, number> = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };

@@ -25,6 +25,7 @@ import {
   captureCheck,
   ladderMate,
   finishTheJob,
+  thinkingAhead,
   skewer,
 } from './fundamentals';
 
@@ -64,7 +65,7 @@ const level1: Unit[] = [
     section: L1,
     color: '#7b3f3f',
     icon: '♛',
-    lessons: [checkEscape, mateInOne, backRank, lesson(old, 'survive-scholar'), mateWithQueen, ladderMate, finishTheJob],
+    lessons: [checkEscape, mateInOne, backRank, lesson(old, 'survive-scholar'), mateWithQueen, ladderMate],
   },
   { ...principles, section: L1, lessons: [...principles.lessons, lesson(old, 'survive-f7')] },
   {
@@ -102,11 +103,12 @@ const level2: Unit[] = [
   {
     id: 'combinations',
     title: 'Combinations',
-    subtitle: 'Removing the defender, mate in two, f7',
+    subtitle: 'Removing the defender, thinking ahead, mate in two',
     section: L2,
     color: '#7d4a63',
     icon: 'icon:target',
-    lessons: [removeDefender, mateInTwo, f7Attacks],
+    // Calculation before longer mates: the method first, then mate in two, then finishing from your own games.
+    lessons: [removeDefender, thinkingAhead, mateInTwo, finishTheJob, f7Attacks],
   },
   {
     id: 'endgames',
