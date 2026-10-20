@@ -955,6 +955,8 @@ export function runSession(root: HTMLElement, opts: RunOptions): void {
 
   let slotStart = Date.now();
   const converts: boolean[] = [];
+  /** Items you marked "Too easy": graded Easy so they come back much later. */
+  const tooEasy = new Set<number>();
   // Cards already due when the session starts: remembering them is delayed retrieval, worth extra XP.
   const dueAtStart = new Set(opts.items.filter((it) => it.cardId && state.cards[it.cardId] && isDue(state.cards[it.cardId], Date.now())).map((it) => it.cardId!));
   let primaryHandler: () => void = () => undefined;
@@ -990,6 +992,15 @@ export function runSession(root: HTMLElement, opts: RunOptions): void {
       clear(fbDetail);
       if (r.detail) fbDetail.append(md(r.detail));
       ctx.secondary(null);
+      // Autonomy: you can send a card you truly know away for longer.
+      if (r.correct && opts.mode === 'practice' && slot.item.cardId && !slot.retry) {
+        const origin = slot.origin;
+        ctx.secondary('Too easy', () => {
+          tooEasy.add(origin);
+          ctx.secondary(null);
+          fbDetail.append(h('p.muted', 'Got it: you’ll see this much less often.'));
+        });
+      }
       ctx.button('Continue', advance);
     },
   };
@@ -1026,7 +1037,7 @@ export function runSession(root: HTMLElement, opts: RunOptions): void {
     const now = Date.now();
     for (const [origin, r] of results) {
       const item = opts.items[origin];
-      if (item.cardId) gradeCard(item.cardId, opts.mode === 'lesson' && r.correct ? 3 : r.grade, now);
+      if (item.cardId) gradeCard(item.cardId, tooEasy.has(origin) ? 4 : opts.mode === 'lesson' && r.correct ? 3 : r.grade, now);
       recordTags(item.tags, r.correct, now);
     }
     const before = currentStreak(now);

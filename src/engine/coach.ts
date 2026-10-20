@@ -1,5 +1,8 @@
 import { CARDS, LESSONS, cardRef, lessonRef, type CardRef, type LessonRef } from '../data';
 import type { Exercise } from '../types';
+import { Chess } from 'chess.js';
+import { mixedPool, type Puzzle } from './puzzles';
+import { variantOf } from './variants';
 import { isDue, retrievability } from './srs';
 import { currentStep, lessonUnlocked, repertoireOpen, setAvailable } from './levels';
 import { LEVELS } from '../data';
@@ -111,17 +114,94 @@ function drillItem(id: string): Item {
 
 export const SESSION_SIZE = 12;
 
-/** Daily review: due cards first, then the shakiest learned cards so a session is never empty. */
-export function buildReview(now = Date.now()): Item[] {
-  const due = dueCards(now);
-  const picked = due.slice(0, SESSION_SIZE);
-  if (picked.length < 6) {
-    const extra = CARDS.filter((c) => learned(c) && !picked.includes(c))
-      .sort((a, b) => retrievability(state.cards[a.id], now) - retrievability(state.cards[b.id], now))
-      .slice(0, 6 - picked.length);
-    picked.push(...extra);
+/** Lessons whose idea is a puzzle theme: reviews of their find-the-move cards can use a fresh puzzle instead. */
+const LESSON_THEMES: Record<string, string[]> = {
+  'tactics-values': ['hangingPiece'],
+  'mate-one': ['mateIn1'],
+  'mate-backrank': ['backRankMate'],
+  'tactics-fork': ['fork'],
+  'fork-check': ['fork'],
+  'tactics-pin': ['pin'],
+  skewer: ['skewer'],
+  'tactics-discovery': ['discoveredAttack'],
+  'double-check': ['doubleCheck'],
+  'remove-defender': ['capturingDefender'],
+  'mate-two': ['mateIn2'],
+  'f7-attacks': ['attackingF2F7'],
+};
+
+const passedSet = (id: string) => !!state.sets[id]?.mastered;
+
+/** A puzzle you haven't seen, as a find-the-move item. */
+function puzzleItem(p: Puzzle, label: string, cardId?: string, tags: string[] = []): Item | null {
+  try {
+    const c = new Chess(p.fen);
+    const solution = p.moves.map((u) => c.move({ from: u.slice(0, 2), to: u.slice(2, 4), promotion: u[4] }).san);
+    const ideas = p.themes.filter((t) => ['fork', 'pin', 'skewer', 'discoveredAttack', 'mateIn1', 'mateIn2', 'backRankMate', 'hangingPiece', 'attackingF2F7', 'doubleCheck', 'capturingDefender'].includes(t));
+    const exercise: Exercise = {
+      type: 'find',
+      side: new Chess(p.fen).turn(),
+      setup: '',
+      fen: p.fen,
+      solution,
+      prompt: 'New position, same idea: find the best move.',
+      explain: `**${solution.join(' ')}**${ideas.length ? ` (${ideas.map((t) => tagLabel(t)).join(', ')})` : ''}.`,
+    };
+    return { exercise, tags, cardId, label };
+  } catch {
+    return null;
   }
-  const items = interleave(picked).map(toItem);
+}
+
+function freshPuzzle(themes: string[], seen: Set<string>): Puzzle | undefined {
+  const pool = mixedPool(passedSet).filter((p) => !state.puzzles[p.id] && !seen.has(p.id) && p.themes.some((t) => themes.includes(t)));
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+/**
+ * Review the idea, not the item: a card you've answered correctly a couple of times comes back as a new
+ * instance (a fresh puzzle with the same theme, or the same position mirrored/colour-swapped), graded on
+ * the original card. Opening questions stay as they are.
+ */
+export function reviewItem(c: CardRef, seen = new Set<string>()): Item {
+  const base = toItem(c);
+  const card = state.cards[c.id];
+  if (!card || card.reps - card.lapses < 2) return base;
+  const themes = c.exercise.type === 'find' ? (LESSON_THEMES[c.lesson.id] ?? []) : [];
+  if (themes.length && Math.random() < 0.6) {
+    const p = freshPuzzle(themes, seen);
+    if (p) {
+      seen.add(p.id);
+      const item = puzzleItem(p, `New position · ${c.lesson.title}`, c.id, c.tags);
+      if (item) return item;
+    }
+  }
+  const v = variantOf(c.exercise);
+  return v ? { ...base, exercise: v, label: `New angle · ${c.lesson.title}` } : base;
+}
+
+/** Fresh puzzles from ideas you've learned (used to top up short reviews instead of repeating known cards). */
+export function freshPuzzleItems(n: number, seen = new Set<string>()): Item[] {
+  const learned = Object.entries(LESSON_THEMES)
+    .filter(([id]) => isLessonDone(id))
+    .flatMap(([, t]) => t);
+  const out: Item[] = [];
+  for (let k = 0; k < n; k++) {
+    const p = freshPuzzle(learned, seen);
+    if (!p) break;
+    seen.add(p.id);
+    const item = puzzleItem(p, 'Fresh puzzle');
+    if (item) out.push(item);
+  }
+  return out;
+}
+
+/** Daily review: due cards only (as new instances once you know them), topped up with fresh puzzles, never with repeats. */
+export function buildReview(now = Date.now()): Item[] {
+  const seen = new Set<string>();
+  const due = dueCards(now).slice(0, SESSION_SIZE);
+  const items = interleave(due).map((c) => reviewItem(c, seen));
+  if (items.length < 6) items.push(...freshPuzzleItems(6 - items.length, seen));
   const drills = gameDrillsDue(now).slice(0, 3).map(drillItem);
   // Sprinkle game drills through the session rather than bunching them.
   drills.forEach((d, i) => items.splice(Math.min(items.length, 2 + i * 4), 0, d));
@@ -160,7 +240,8 @@ export function buildWeakSpotDrill(tag: string, now = Date.now()): Item[] {
     const rb = state.cards[b.id] ? retrievability(state.cards[b.id], now) : 0;
     return ra - rb;
   });
-  return interleave(ranked.slice(0, 8)).map(toItem);
+  const seen = new Set<string>();
+  return interleave(ranked.slice(0, 8)).map((c) => reviewItem(c, seen));
 }
 
 /** Fast recognition drill: flashes, skeletons, and "which opening" questions from what you've learned. */
@@ -188,7 +269,10 @@ export function buildPositionalDrill(size = 8, now = Date.now()): Item[] {
 }
 
 export function buildUnitReview(unitId: string): Item[] {
-  return shuffleItems(CARDS.filter((c) => c.unit.id === unitId).map(toItem)).slice(0, SESSION_SIZE);
+  const seen = new Set<string>();
+  return shuffleItems(CARDS.filter((c) => c.unit.id === unitId))
+    .slice(0, SESSION_SIZE)
+    .map((c) => reviewItem(c, seen));
 }
 
 export function buildGameDrills(): Item[] {
