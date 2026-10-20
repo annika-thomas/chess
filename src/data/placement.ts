@@ -161,7 +161,7 @@ export const files: Lesson = {
       { title: 'The 7th rank', fen: SEVENTH, side: 'w', arrows: [arrow('d1', 'd7', 'green')] },
     ),
     walk('w', W_SEVENTH, { fen: SEVENTH_GAME, title: 'Worked example: rook to the 7th wins a pawn' }),
-    concept('seventh-grade', 'grade', '{side} to move. Get a rook to the 7th rank (your opponent’s second rank) if it’s a good idea here.', '{good}: the rook reaches your opponent’s second rank, hitting pawns from the side and cutting off the king.'),
+    concept('seventh-grade', 'grade', '{side} to move. Get a rook to the 7th rank ({other}’s second rank) if it’s a good idea here.', '{good}: the rook reaches {other}’s second rank, hitting pawns from the side and cutting off the king.'),
     concept('seventh-grade', 'grade', 'Real endgame position. {side} to move: find the rook move to the 7th rank.', '{good}. On the 7th, a rook attacks every pawn that hasn’t moved, and they can only be defended by pieces.'),
     choice('What do players call two rooks on the 7th rank?', [
       yes('“Pigs”: they eat everything', 'That’s the nickname. Two rooks on the 7th usually win pawns or give mate.'),
@@ -215,7 +215,7 @@ export const pawnWeaknesses: Lesson = {
       'An **isolated pawn** has no pawns of its own colour on the files beside it, so only pieces can defend it, and the square in front of it is a perfect home for your pieces. To spot one: look at the files next to each pawn.',
       { title: 'Isolated pawns', fen: IQP, side: 'w', highlights: ['d5', 'd4'] },
     ),
-    concept('isolated-tap', 'tap', 'Real game position. Tap the isolated pawn of {side}’s opponent: no friendly pawn on the files beside it.', 'The isolated pawn is on {squares}. Check the files on each side: no pawns of its colour, so no pawn can ever defend it.'),
+    concept('isolated-tap', 'tap', 'Real game position. Tap {other}’s isolated pawn: no {other} pawn on the files beside it.', 'The isolated pawn is on {squares}. Check the files on each side: no pawns of its colour, so no pawn can ever defend it.'),
     guided(
       grade({
         prompt: 'Black’s d5 pawn is isolated. Blockade the square in front of it, or attack the pawn.',
@@ -226,7 +226,7 @@ export const pawnWeaknesses: Lesson = {
         tags: ['pawns'],
       }),
     ),
-    concept('isolated-tap', 'tap', 'Find the weak, isolated pawn of {side}’s opponent.', '{squares}: nothing beside it on either file, so it can only be defended by pieces.'),
+    concept('isolated-tap', 'tap', 'Find {other}’s weak, isolated pawn.', '{squares}: nothing beside it on either file, so it can only be defended by pieces.'),
     info('A **passed pawn** has no enemy pawns in front of it or on the files beside it, so only pieces can stop it. “Passed pawns must be pushed.”', { title: 'Passed pawns', fen: PASSED, side: 'w', highlights: ['b5'] }),
     walk('w', W_PASSED, { fen: PASSED, title: 'Worked example: push the passed pawn' }),
     concept('passed-tap', 'tap', 'Real game position. Tap {side}’s passed pawn: no enemy pawn in front of it or on the files beside it.', 'The passed pawn is on {squares}. Nothing but pieces can stop it.'),

@@ -942,6 +942,7 @@ const mountConcept =
     const fill = (t: string) =>
       t
         .replaceAll('{side}', sideName)
+        .replaceAll('{other}', sideName === 'White' ? 'Black' : 'White')
         .replaceAll('{good}', sanList(pick.good ?? []).replace(/, ([^,]*)$/, ' or $1'))
         .replaceAll('{files}', filesText)
         .replaceAll('{open}', pick.open?.length ? fileList(pick.open) : filesText)
