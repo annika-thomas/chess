@@ -19,3 +19,18 @@ describe('master games', () => {
     });
   }
 });
+
+describe('master game chunks', () => {
+  it('cover every move once, starting with the opening', async () => {
+    const { segmentsOf } = await import('../src/ui/guess');
+    for (const g of MASTER_GAMES) {
+      const n = parseLine(g.line).moves.length;
+      const segs = segmentsOf(g);
+      expect(segs[0].from, g.id).toBe(0);
+      expect(segs[segs.length - 1].to, g.id).toBe(n);
+      for (let i = 1; i < segs.length; i++) expect(segs[i].from).toBe(segs[i - 1].to);
+      // Every chunk gives the guessing side at least two moves.
+      for (const s of segs) expect([...Array(s.to - s.from).keys()].filter((k) => sideToMove(s.from + k) === g.side).length, `${g.id}@${s.from}`).toBeGreaterThanOrEqual(2);
+    }
+  });
+});

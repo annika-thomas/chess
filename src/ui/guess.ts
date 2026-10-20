@@ -51,14 +51,25 @@ export interface Segment {
   to: number;
 }
 
-const SEGMENT_PLIES = 20;
-const SEGMENT_START = 16; // after the opening (move 9)
+const OPENING_PLIES = 16; // moves 1–8
+const SEGMENT_PLIES = 16;
 
+/** The whole game in chunks: the opening, then the rest split evenly, so every move is in exactly one chunk. */
 export function segmentsOf(g: MasterGame): Segment[] {
   const n = parseLine(g.line).moves.length;
-  const out: Segment[] = [];
-  for (let from = SEGMENT_START; from < n - 6; from += SEGMENT_PLIES) out.push({ from, to: Math.min(n, from + SEGMENT_PLIES) });
+  if (n <= OPENING_PLIES + 4) return [{ from: 0, to: n }];
+  const out: Segment[] = [{ from: 0, to: OPENING_PLIES }];
+  const k = Math.max(1, Math.round((n - OPENING_PLIES) / SEGMENT_PLIES));
+  const size = Math.ceil((n - OPENING_PLIES) / k / 2) * 2; // whole moves
+  for (let from = OPENING_PLIES; from < n; from += size) out.push({ from, to: Math.min(n, from + size) });
   return out;
+}
+
+/** Opening, middlegame, finish. */
+function segmentName(i: number, count: number): string {
+  if (i === 0) return 'Opening';
+  if (i === count - 1) return count === 2 ? 'Middlegame & finish' : 'Finish';
+  return 'Middlegame';
 }
 
 export const segmentKey = (g: MasterGame, seg?: Segment) => (seg ? `${g.id}@${seg.from}` : g.id);
@@ -145,7 +156,7 @@ export function startGuess(g: MasterGame, seg?: Segment): void {
       'div.note',
       md(
         seg
-          ? `**You are ${player}** (${g.side === 'w' ? 'White' : 'Black'}), moves ${moveNo(seg.from)}–${moveNo(seg.to - 1)}. Before each guess, ask: which of my pieces is worst, and what does my opponent want?`
+          ? `**You are ${player}** (${g.side === 'w' ? 'White' : 'Black'}), moves ${moveNo(seg.from)}–${moveNo(seg.to - 1)}. ${seg.from === 0 ? 'Before each guess, ask: which piece still needs to come out, and how do I fight for the centre?' : 'Before each guess, ask: which of my pieces is worst, and what does my opponent want?'}`
           : `**You are ${player}** (${g.side === 'w' ? 'White' : 'Black'}). ${g.intro}`,
       ),
     ),
@@ -311,12 +322,12 @@ export function startGuess(g: MasterGame, seg?: Segment): void {
 function chooseSegment(g: MasterGame): void {
   const segs = segmentsOf(g);
   const whole = h('button.btn.ghost.wide', { type: 'button' }, 'Whole game');
-  const rows = segs.map((seg) => {
+  const rows = segs.map((seg, i) => {
     const rec = state.masters[segmentKey(g, seg)];
     const b = h(
       'button.btn.primary.wide',
       { type: 'button' },
-      `Moves ${moveNo(seg.from)}–${moveNo(seg.to - 1)}${rec ? ` · best ${Math.round((rec.best / Math.max(1, rec.max)) * 100)}%` : ''}`,
+      `${segmentName(i, segs.length)} · moves ${moveNo(seg.from)}–${moveNo(seg.to - 1)}${rec ? ` · best ${Math.round((rec.best / Math.max(1, rec.max)) * 100)}%` : ''}`,
     );
     b.addEventListener('click', () => {
       close();
@@ -325,7 +336,7 @@ function chooseSegment(g: MasterGame): void {
     return b;
   });
   const close = sheet(
-    h('div.lesson-sheet', h('h2', g.title), h('p.muted', 'Short segments (about 10 moves) keep it focused. Start after the opening, where the plans are.'), h('div.stack', ...rows, whole)),
+    h('div.lesson-sheet', h('h2', g.title), h('p.muted', 'Play it in chunks of about 8 moves (opening, middlegame, finish), or the whole game at once.'), h('div.stack', ...rows, whole)),
   );
   whole.addEventListener('click', () => {
     close();
