@@ -1,5 +1,5 @@
 import { Chess } from 'chess.js';
-import { botMove, engine, evaluate, isMistake, judgeMove, lossLabel, LEVELS, levelById, type Level } from '../engine/bot';
+import { botMove, engine, evaluate, explainBlunder, isMistake, judgeMove, lossLabel, LEVELS, materialWords, levelById, type Level } from '../engine/bot';
 import { annotatable, weekStart } from '../engine/homework';
 import { repertoireOpen } from '../engine/levels';
 import { findMistakes } from '../engine/mistakes';
@@ -426,10 +426,12 @@ function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss, s
     status.textContent = 'checking…';
     let bad = false;
     let loss = 0;
+    let bestUci = '';
     try {
       const j = await judgeMove(fen, san, 8);
       bad = isMistake(j, 200);
       loss = j.loss;
+      bestUci = j.best;
     } catch {
       /* no engine: just play on */
     }
@@ -440,12 +442,76 @@ function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss, s
     sound.wrong();
     const back = h('button.btn.primary.small-btn', { type: 'button' }, icon('undo'), ' Take it back');
     const on = h('button.btn.ghost.small-btn', { type: 'button' }, 'Play on');
+    const why = h('button.btn.ghost.small-btn', { type: 'button' }, 'Why?');
     note(
-      `**Blunder guard:** ${san} loses ${lossLabel(loss)}. What can your opponent capture, check or threaten now? (Taking it back makes this game unrated.)`,
+      `**Blunder guard:** ${san} is a mistake: ${lossLabel(loss)} worse than your best move. What can your opponent capture, check or threaten now? Think first, then tap **Why?** to see. (Taking it back makes this game unrated.)`,
       'warn',
     );
-    coach.append(h('div.guard-btns', back, on));
+    coach.append(h('div.guard-btns', back, why, on));
+    why.addEventListener('click', () => void showWhy());
+
+    /** Show the refutation: the opponent's best reply and the line after it, steppable on the board. */
+    async function showWhy(): Promise<void> {
+      why.remove();
+      const box = h('div.why-box', h('p.muted', 'Looking at the best reply…'));
+      // Keep the buttons in view: the explanation goes below them, with more room while it's open.
+      coach.append(box);
+      coach.classList.add('why-open');
+      movesEl.hidden = true;
+      let ex;
+      try {
+        ex = await explainBlunder(fen, san, bestUci);
+      } catch {
+        box.replaceChildren(h('p.muted', 'Couldn’t start the engine.'));
+        return;
+      }
+      if (!ex.line.length) {
+        box.replaceChildren(h('p.muted', 'No clear reply found.'));
+        return;
+      }
+      const them = side === 'w' ? 'Black' : 'White';
+      const first = ex.line[0].san;
+      const lineText = ex.line.map((m) => m.san).join(' ');
+      const verdict = ex.mate
+        ? `it leads to checkmate: **${lineText}**.`
+        : ex.material <= -1
+          ? `after **${lineText}** you’re down ${materialWords(-ex.material)}.`
+          : ex.better
+            ? `you don’t lose material, but you miss something much stronger. Compare the line (**${lineText}**) with the better move below.`
+            : `you don’t lose material right away, but your position gets clearly worse (**${lineText}**).`;
+      let k = 0;
+      const label = h('span.step-label');
+      const prev = h('button.btn.ghost.nav-btn', { type: 'button', 'aria-label': 'Previous move' }, icon('prev'));
+      const next = h('button.btn.ghost.nav-btn', { type: 'button', 'aria-label': 'Next move' }, icon('next'));
+      const show = (i: number) => {
+        k = Math.max(0, Math.min(ex.line.length, i));
+        if (k === 0) {
+          board.sync();
+          board.arrows([{ from: ex.line[0].from, to: ex.line[0].to, color: 'red' }]);
+          label.textContent = `${them}’s reply`;
+        } else {
+          const m = ex.line[k - 1];
+          board.showFen(m.fen);
+          board.arrows([{ from: m.from, to: m.to, color: (k - 1) % 2 === 0 ? 'red' : 'green' }]);
+          label.textContent = `${k} / ${ex.line.length}`;
+        }
+      };
+      prev.addEventListener('click', () => show(k - 1));
+      next.addEventListener('click', () => show(k + 1));
+      box.replaceChildren(
+        md(`${them} answers **${first}** (red arrow), and ${verdict}${ex.better ? ` A better move was **${ex.better}**.` : ''}`),
+        h('div.why-steps', prev, label, next),
+      );
+      show(0);
+    }
+    const leaveWhy = () => {
+      board.arrows([]);
+      board.sync();
+      coach.classList.remove('why-open');
+      movesEl.hidden = false;
+    };
     back.addEventListener('click', () => {
+      leaveWhy();
       board.undo();
       times.pop();
       rated = false;
@@ -454,7 +520,9 @@ function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss, s
       yourTurn();
     });
     on.addEventListener('click', () => {
-      coach.lastElementChild?.remove(); // the buttons
+      leaveWhy();
+      coach.querySelector('.why-box')?.remove();
+      coach.querySelector('.guard-btns')?.remove();
       note('Playing on. Watch what happens next: it’s a good moment to annotate later.');
       setTimeout(botTurn, 150);
     });

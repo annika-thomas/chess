@@ -45,6 +45,8 @@ interface Line {
   move: string;
   /** Centipawns from the side to move's point of view (mates mapped to ±100000). */
   score: number;
+  /** The engine's principal variation (UCI), starting with `move`. */
+  pv?: string[];
 }
 
 type Listener = (line: string) => void;
@@ -119,7 +121,7 @@ class Engine {
           const move = / pv (\S+)/.exec(line)?.[1];
           if (!move) return;
           const score = cp ? Number(cp[1]) : mate ? Math.sign(Number(mate[1])) * 100000 : 0;
-          lines.set(mpv, { move, score });
+          lines.set(mpv, { move, score, pv: / pv (.+)$/.exec(line)?.[1].split(' ') });
         },
       );
       const bestMove = best.split(' ')[1];
@@ -227,4 +229,67 @@ export function pickMove(lines: Line[], maxLoss: number, rand = Math.random): st
     if (r <= 0) return pool[i].move;
   }
   return pool[0].move;
+}
+
+const PIECE_VALUE: Record<string, number> = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
+const materialFor = (c: Chess, side: 'w' | 'b') =>
+  c.board().flat().reduce((a, sq) => (sq ? a + (sq.color === side ? 1 : -1) * PIECE_VALUE[sq.type] : a), 0);
+
+export interface BlunderExplanation {
+  /** Your opponent's best reply and the line after it (SAN), with the position after each move. */
+  line: Array<{ san: string; from: string; to: string; fen: string }>;
+  /** Material change for you over the line (negative = you lose material). */
+  material: number;
+  mate: boolean;
+  /** A better move instead of yours (SAN). */
+  better?: string;
+}
+
+/** Why was a move bad? The engine's best reply and what it leads to, a few moves deep. */
+export async function explainBlunder(fenBefore: string, san: string, bestUci?: string, plies = 8): Promise<BlunderExplanation> {
+  const c = new Chess(fenBefore);
+  const me = c.turn();
+  c.move(san);
+  const startMaterial = materialFor(c, me);
+  const [top] = await engine.analyse(c.fen(), { depth: 12, multipv: 1 });
+  const line: BlunderExplanation['line'] = [];
+  for (const uci of (top?.pv ?? (top ? [top.move] : [])).slice(0, plies)) {
+    try {
+      const mv = c.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] ?? 'q' });
+      line.push({ san: mv.san, from: mv.from, to: mv.to, fen: c.fen() });
+    } catch {
+      break;
+    }
+    if (c.isGameOver()) break;
+  }
+  // Stop at the first quiet point (at least three moves in, and the next move isn't a capture), so the
+  // material count isn't taken in the middle of a trade.
+  let end = line.length;
+  for (let i = Math.min(2, line.length - 1); i < line.length; i++) {
+    if (!line[i + 1] || !line[i + 1].san.includes('x')) {
+      end = i + 1;
+      break;
+    }
+  }
+  line.splice(end);
+  const last = line.length ? new Chess(line[line.length - 1].fen) : c;
+  const material = materialFor(last, me) - startMaterial;
+  let better: string | undefined;
+  if (bestUci) {
+    try {
+      better = new Chess(fenBefore).move({ from: bestUci.slice(0, 2), to: bestUci.slice(2, 4), promotion: bestUci[4] ?? 'q' }).san;
+    } catch {
+      better = undefined;
+    }
+  }
+  return { line, material, mate: line.some((m) => m.san.endsWith('#')) || (top ? Math.abs(top.score) >= 100000 && top.score > 0 : false), better };
+}
+
+/** Plain words for an amount of material. */
+export function materialWords(n: number): string {
+  if (n >= 9) return 'your queen';
+  if (n >= 5) return 'a rook';
+  if (n >= 3) return 'a piece';
+  if (n === 2) return 'two pawns';
+  return 'a pawn';
 }
