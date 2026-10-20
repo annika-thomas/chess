@@ -7,6 +7,7 @@ import { render, sheet } from './app';
 import { Board } from './board';
 import { clear, figHtml, h, inline, md } from './dom';
 import { sound } from './sound';
+import { whyBox } from './why';
 import { icon } from './icons';
 
 const moveLabel = (ply: number, san: string) => formatMoves([...Array(ply).fill(''), san], ply);
@@ -154,7 +155,17 @@ export function startGuess(g: MasterGame, seg?: Segment): void {
   showScore();
 
   /** Play opponent moves until it's the learner's turn. */
+  /** For a weaker-but-playable move: the explanation on request. */
+  function whyButton(fen: string, san: string): HTMLElement {
+    const btn = h('button.btn.ghost.small-btn', { type: 'button' }, 'Why not my move?');
+    btn.addEventListener('click', () => btn.replaceWith(whyBox(board, fen, san, { wait: true })));
+    return btn;
+  }
+
   function advance(): void {
+    // Leave any "why" line the learner was stepping through.
+    board.arrows([]);
+    board.sync();
     setNext(null);
     if (i >= moves.length) return finish();
     if (sideToMove(i) !== g.side) {
@@ -216,8 +227,9 @@ export function startGuess(g: MasterGame, seg?: Segment): void {
     say(h('div.verdict', 'Checking your move…'));
     let verdict = '';
     let pts = 0;
+    let loss = 0;
     try {
-      const loss = await moveLoss(fenBefore, san);
+      loss = await moveLoss(fenBefore, san);
       ({ points: pts, verdict } = pointsForLoss(loss));
       pts = Math.min(pts, full);
     } catch {
@@ -237,6 +249,7 @@ export function startGuess(g: MasterGame, seg?: Segment): void {
         h(pts > 0 ? 'div.verdict.ok' : 'div.verdict.bad', { html: inline(`You played ${tried}. ${verdict}${pts ? ` +${pts}` : ''}`) }),
         h('div.note', { html: inline(`**${short} played ${moveLabel(ply, master)}.**`) }),
         note(ply),
+        ...(loss > 200 ? [whyBox(board, fenBefore, san, { wait: true, intro: '**Why yours is a mistake:** ' })] : loss > 80 ? [whyButton(fenBefore, san)] : []),
       );
       i++;
       busy = false;

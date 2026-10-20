@@ -1,5 +1,5 @@
 import { Chess } from 'chess.js';
-import { botMove, engine, evaluate, explainBlunder, isMistake, judgeMove, lossLabel, LEVELS, materialWords, levelById, type Level } from '../engine/bot';
+import { botMove, engine, evaluate, isMistake, judgeMove, lossLabel, LEVELS, levelById, type Level } from '../engine/bot';
 import { annotatable, weekStart } from '../engine/homework';
 import { repertoireOpen } from '../engine/levels';
 import { findMistakes } from '../engine/mistakes';
@@ -17,6 +17,7 @@ import { clear, figHtml, h, md } from './dom';
 import { topBar } from './learn';
 import { masterCards } from './guess';
 import { movesViewer } from './repertoire';
+import { whyBox } from './why';
 import { sound } from './sound';
 import { icon, type IconName } from './icons';
 
@@ -451,58 +452,13 @@ function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss, s
     why.addEventListener('click', () => void showWhy());
 
     /** Show the refutation: the opponent's best reply and the line after it, steppable on the board. */
-    async function showWhy(): Promise<void> {
+    function showWhy(): void {
       why.remove();
-      const box = h('div.why-box', h('p.muted', 'Looking at the best reply…'));
+      const box = whyBox(board, fen, san, { bestUci });
       // Keep the buttons in view: the explanation goes below them, with more room while it's open.
       coach.append(box);
       coach.classList.add('why-open');
       movesEl.hidden = true;
-      let ex;
-      try {
-        ex = await explainBlunder(fen, san, bestUci);
-      } catch {
-        box.replaceChildren(h('p.muted', 'Couldn’t start the engine.'));
-        return;
-      }
-      if (!ex.line.length) {
-        box.replaceChildren(h('p.muted', 'No clear reply found.'));
-        return;
-      }
-      const them = side === 'w' ? 'Black' : 'White';
-      const first = ex.line[0].san;
-      const lineText = ex.line.map((m) => m.san).join(' ');
-      const verdict = ex.mate
-        ? `it leads to checkmate: **${lineText}**.`
-        : ex.material <= -1
-          ? `after **${lineText}** you’re down ${materialWords(-ex.material)}.`
-          : ex.better
-            ? `you don’t lose material, but you miss something much stronger. Compare the line (**${lineText}**) with the better move below.`
-            : `you don’t lose material right away, but your position gets clearly worse (**${lineText}**).`;
-      let k = 0;
-      const label = h('span.step-label');
-      const prev = h('button.btn.ghost.nav-btn', { type: 'button', 'aria-label': 'Previous move' }, icon('prev'));
-      const next = h('button.btn.ghost.nav-btn', { type: 'button', 'aria-label': 'Next move' }, icon('next'));
-      const show = (i: number) => {
-        k = Math.max(0, Math.min(ex.line.length, i));
-        if (k === 0) {
-          board.sync();
-          board.arrows([{ from: ex.line[0].from, to: ex.line[0].to, color: 'red' }]);
-          label.textContent = `${them}’s reply`;
-        } else {
-          const m = ex.line[k - 1];
-          board.showFen(m.fen);
-          board.arrows([{ from: m.from, to: m.to, color: (k - 1) % 2 === 0 ? 'red' : 'green' }]);
-          label.textContent = `${k} / ${ex.line.length}`;
-        }
-      };
-      prev.addEventListener('click', () => show(k - 1));
-      next.addEventListener('click', () => show(k + 1));
-      box.replaceChildren(
-        md(`${them} answers **${first}** (red arrow), and ${verdict}${ex.better ? ` A better move was **${ex.better}**.` : ''}`),
-        h('div.why-steps', prev, label, next),
-      );
-      show(0);
     }
     const leaveWhy = () => {
       board.arrows([]);
