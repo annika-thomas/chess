@@ -16,6 +16,8 @@ export interface Arrow {
 interface BaseExercise {
   /** Concept tags used to find the learner's weak spots, e.g. "center", "f7". */
   tags?: string[];
+  /** A guided step that only makes sense inside its lesson: not reviewed on its own. */
+  noReview?: boolean;
 }
 
 /** A reading card, optionally with a board. */
@@ -40,6 +42,8 @@ export interface WalkExercise extends BaseExercise {
   /** Plies auto-played before the walkthrough starts (default 0). */
   from?: number;
   title?: string;
+  /** Start from this position instead of the initial one (for worked examples from games). */
+  fen?: string;
 }
 
 /** Recall: play the line from memory. The opponent's moves are played for you. */
@@ -159,7 +163,26 @@ export interface GradeExercise extends BaseExercise {
   explain: string;
 }
 
-export type Exercise = InfoExercise | WalkExercise | RecallExercise | FindExercise | ChoiceExercise | SquareExercise | EndgameExercise | TapExercise | GradeExercise;
+/**
+ * A positional idea practised on a different real position each time: the position is drawn from a pool of
+ * game positions (mined and checked with Stockfish), so reviews never repeat the same board.
+ */
+export interface ConceptExercise extends BaseExercise {
+  type: 'concept';
+  /** Pool key, e.g. 'files-grade' or 'outpost-tap'. */
+  pool: string;
+  mode: 'tap' | 'grade';
+  /**
+   * Filled per position: {side} White/Black, {good} the good moves, {files} the open file(s),
+   * {squares} the key squares (outpost, weak pawn, worst piece...).
+   */
+  prompt: string;
+  explain: string;
+  /** Guided first step on the same position: tap the key squares before playing the move. */
+  first?: { prompt: string; explain: string };
+}
+
+export type Exercise = ConceptExercise | InfoExercise | WalkExercise | RecallExercise | FindExercise | ChoiceExercise | SquareExercise | EndgameExercise | TapExercise | GradeExercise;
 
 export interface Lesson {
   id: string;

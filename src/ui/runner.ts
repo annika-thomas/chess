@@ -3,7 +3,9 @@ import { formatMoves, parseLine, sameSan, sideToMove, squaresFor } from '../engi
 import type { Grade } from '../engine/srs';
 import { addXp, completeLesson, currentStreak, gradeCard, logAnswer, logProgress, markHomework, recordTags, save, state, xpToday } from '../engine/store';
 import { isDue } from '../engine/srs';
-import type { ChoiceExercise, EndgameExercise, Exercise, FindExercise, GradeExercise, InfoExercise, RecallExercise, SquareExercise, TapExercise, WalkExercise } from '../types';
+import placementPool from '../data/placementPool.json';
+import type { PoolItem } from '../data/placement';
+import type { ConceptExercise, ChoiceExercise, EndgameExercise, Exercise, FindExercise, GradeExercise, InfoExercise, RecallExercise, SquareExercise, TapExercise, WalkExercise } from '../types';
 import { botMove, engine, evaluate, judgeMove, levelById, lossLabel, winPct } from '../engine/bot';
 import { Chess } from 'chess.js';
 import { Board, pawnSkeleton } from './board';
@@ -97,6 +99,10 @@ function lineDriver(
 ): () => void {
   const { moves, notes } = parseLine(ex.line);
   const from = ex.from ?? 0;
+  // Worked examples can start from any position: count plies from that position's move number.
+  const startFen = 'fen' in ex ? ex.fen : undefined;
+  const base = startFen ? fenPly(startFen) : 0;
+  const turnAt = (k: number) => sideToMove(base + k);
   let i = from;
   let mistakes = 0;
   let wrongHere = 0;
@@ -109,7 +115,7 @@ function lineDriver(
     onMove: (san) => {
       if (sameSan(san, moves[i])) {
         board.arrows([]);
-        bubble.show(i, moves[i], notes[i]);
+        bubble.show(base + i, moves[i], notes[i]);
         i++;
         wrongHere = 0;
         board.setInteractive(false);
@@ -121,7 +127,7 @@ function lineDriver(
       if (!guided) {
         if (wrongHere === 1) {
           mistakes++;
-          missed.push(moveLabel(i, moves[i]));
+          missed.push(moveLabel(base + i, moves[i]));
         }
         if (wrongHere >= 2) showHint();
       }
@@ -130,7 +136,7 @@ function lineDriver(
       return false;
     },
   });
-  board.load(moves.slice(0, from));
+  board.load(moves.slice(0, from), startFen);
 
   const showHint = () => {
     const sq = squaresFor(board.chess, moves[i]);
@@ -155,7 +161,7 @@ function lineDriver(
       if (guided) {
         ctx.button('Continue', () => ctx.done({ correct: true, grade: 3, quiet: true }));
       } else {
-        const learnerMoves = moves.slice(from).filter((_, k) => sideToMove(from + k) === ex.side).length;
+        const learnerMoves = moves.slice(from).filter((_, k) => turnAt(from + k) === ex.side).length;
         const grade: Grade = mistakes === 0 ? 3 : mistakes === 1 && learnerMoves >= 4 ? 2 : 1;
         ctx.done({
           correct: mistakes === 0,
@@ -166,11 +172,11 @@ function lineDriver(
       }
       return;
     }
-    if (sideToMove(i) !== ex.side) {
+    if (turnAt(i) !== ex.side) {
       timer = window.setTimeout(
         () => {
           board.play(moves[i]);
-          bubble.show(i, moves[i], notes[i]);
+          bubble.show(base + i, moves[i], notes[i]);
           i++;
           step();
         },
@@ -184,7 +190,7 @@ function lineDriver(
 
   if (!guided) {
     ctx.secondary('Hint', () => {
-      if (i < moves.length && sideToMove(i) === ex.side) {
+      if (i < moves.length && turnAt(i) === ex.side) {
         if (wrongHere === 0) {
           mistakes++;
           missed.push(moveLabel(i, moves[i]));
@@ -890,6 +896,61 @@ const mountGrade =
     return () => board.destroy();
   };
 
+/** Recently shown pool positions, so the same board doesn't come straight back. */
+const recentPool: string[] = [];
+
+/** Draw a fresh real position for a positional idea, then ask about it. */
+const mountConcept =
+  (ex: ConceptExercise): Mount =>
+  (host, ctx) => {
+    const items = (placementPool as Record<string, PoolItem[]>)[ex.pool] ?? [];
+    const fresh = items.filter((p) => !recentPool.includes(p.fen));
+    const pick = (fresh.length ? fresh : items)[Math.floor(Math.random() * (fresh.length || items.length))];
+    if (!pick) {
+      ctx.done({ correct: true, grade: 3, quiet: true });
+      return;
+    }
+    recentPool.push(pick.fen);
+    if (recentPool.length > 40) recentPool.shift();
+    const sideName = pick.side === 'w' ? 'White' : 'Black';
+    const fileSquares = (pick.files ?? []).flatMap((f) => [1, 2, 3, 4, 5, 6, 7, 8].map((r) => f + r));
+    const keySquares = pick.squares ?? (pick.files ? fileSquares : pick.answers) ?? [];
+    const filesText = pick.files?.length
+      ? pick.files.length === 1
+        ? `the **${pick.files[0]}-file**`
+        : `the ${pick.files.map((f) => `**${f}**`).join(' and ')}-files`
+      : 'the open file';
+    const fill = (t: string) =>
+      t
+        .replaceAll('{side}', sideName)
+        .replaceAll('{good}', sanList(pick.good ?? []).replace(/, ([^,]*)$/, ' or $1'))
+        .replaceAll('{files}', filesText)
+        .replaceAll('{squares}', sanList(pick.squares ?? pick.answers ?? []).replace(/, ([^,]*)$/, ' and $1'))
+        .replace(/(^|[.!?] )the /g, '$1The ');
+    if (ex.mode === 'tap') {
+      return mountTap({ type: 'tap', prompt: fill(ex.prompt), fen: pick.fen, side: pick.side, answers: pick.answers ?? fileSquares, explain: fill(ex.explain), tags: ex.tags })(host, ctx);
+    }
+    const graded = mountGrade({ type: 'grade', prompt: fill(ex.prompt), fen: pick.fen, side: pick.side, good: pick.good ?? [], ok: pick.ok, explain: fill(ex.explain), tags: ex.tags });
+    if (!ex.first || !keySquares.length) return graded(host, ctx);
+    // Guided: spot the feature first, read why, then play the move on the same board.
+    let spotted = true;
+    let cleanup: (() => void) | void = mountTap({ type: 'tap', prompt: fill(ex.first.prompt), fen: pick.fen, side: pick.side, answers: keySquares, explain: '' })(host, {
+      ...ctx,
+      done: (r) => {
+        spotted = r.correct;
+        host.append(h('div.bubble', h('div.note', { html: inline(`${r.correct ? '✓' : 'Not quite.'} ${fill(ex.first!.explain)}`) })));
+        ctx.button('Next step', () => {
+          if (cleanup) cleanup();
+          clear(host);
+          cleanup = graded(host, { ...ctx, done: (res) => ctx.done(spotted ? res : { ...res, grade: Math.min(res.grade, 2) as Grade }) });
+        });
+      },
+    });
+    return () => {
+      if (cleanup) cleanup();
+    };
+  };
+
 export function mountExercise(ex: Exercise): Mount {
   switch (ex.type) {
     case 'info':
@@ -910,6 +971,8 @@ export function mountExercise(ex: Exercise): Mount {
       return mountTap(ex);
     case 'grade':
       return mountGrade(ex);
+    case 'concept':
+      return mountConcept(ex);
   }
 }
 

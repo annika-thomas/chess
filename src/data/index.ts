@@ -161,7 +161,7 @@ export const lessonRef = (id: string) => byId.get(id);
 
 /** Exercises that become spaced-repetition cards (everything you actively recall). */
 export function isCard(ex: Exercise): boolean {
-  return ex.type !== 'info' && ex.type !== 'walk';
+  return ex.type !== 'info' && ex.type !== 'walk' && !ex.noReview;
 }
 
 export const cardId = (lessonId: string, index: number) => `${lessonId}#${index}`;

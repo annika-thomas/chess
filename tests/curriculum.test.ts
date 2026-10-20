@@ -4,6 +4,8 @@ import * as L from '../src/data/lines';
 import { CARDS, LESSONS, REPERTOIRE, UNITS } from '../src/data';
 import { parseLine, playMoves, sideToMove, tryMove } from '../src/engine/notation';
 import type { Exercise } from '../src/types';
+import pool from '../src/data/placementPool.json';
+import type { PoolItem } from '../src/data/placement';
 
 function setupBoard(ex: { setup?: string; fen?: string }): Chess {
   if (ex.fen) return new Chess(ex.fen);
@@ -18,6 +20,11 @@ function check(ex: Exercise): void {
     case 'walk':
     case 'recall': {
       const { moves } = parseLine(ex.line);
+      if ('fen' in ex && ex.fen) {
+        const c = new Chess(ex.fen);
+        for (const m of moves) expect(tryMove(c, m), `walk move ${m}`).not.toBeNull();
+        break;
+      }
       playMoves(moves);
       const from = ex.from ?? 0;
       expect(from).toBeLessThan(moves.length);
@@ -56,6 +63,18 @@ function check(ex: Exercise): void {
         expect(c.isGameOver(), fen).toBe(false);
       }
       expect(ex.limit).toBeGreaterThan(0);
+      break;
+    }
+    case 'concept': {
+      const items = (pool as Record<string, PoolItem[]>)[ex.pool];
+      expect(items?.length ?? 0, `pool ${ex.pool}`).toBeGreaterThanOrEqual(8);
+      for (const it of items) {
+        const c = new Chess(it.fen);
+        expect(c.turn()).toBe(it.side);
+        if (ex.mode === 'tap') expect(it.answers?.length).toBeGreaterThan(0);
+        if (ex.first) expect((it.squares ?? it.files ?? it.answers)?.length, `${ex.pool} key squares`).toBeGreaterThan(0);
+        else for (const m of it.good ?? []) expect(tryMove(new Chess(it.fen), m), `${ex.pool} ${m}`).not.toBeNull();
+      }
       break;
     }
     case 'tap': {
