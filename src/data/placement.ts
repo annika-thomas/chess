@@ -16,7 +16,9 @@ export interface PoolItem {
   ok?: string[];
   /** Plausible moves that are clearly worse, with the drop in win chance (%), for "which is best?" questions. */
   bad?: { san: string; drop: number }[];
-  /** Open files (files pools) or key squares (outpost, weak pawn, worst piece). */
+  /** Every open file in the position (files pools). */
+  open?: string[];
+  /** Open files with no rook of the side to move yet (files pools), or key squares (outpost, weak pawn, worst piece). */
   files?: string[];
   squares?: string[];
   /** 'engine' (varied engine games), 'yours' (your own games) or 'lichess'. */
@@ -142,18 +144,18 @@ export const files: Lesson = {
       'Rooks need open lines. An **open file** has no pawns on it at all, so a rook there can reach the other side of the board. Rooks stuck behind their own pawns do nothing. Every game, ask: **is there an open file, and who owns it?**',
       { title: 'Rooks on open files', fen: FILES, side: 'w', arrows: [arrow('a1', 'c1', 'green'), arrow('c1', 'c7', 'green')] },
     ),
-    concept('files-tap', 'tap', 'A position from a real game. Tap any square on an open file (a file with no pawns at all).', '{files} has no white or black pawns on it. That’s where the rooks want to be.'),
+    concept('files-tap', 'tap', 'A position from a real game. Tap any square on an open file (a file with no pawns at all).', 'Open here: {open}, with no pawns of either colour. That’s where the rooks want to be.'),
     walk('b', W_FILES_1, { fen: FILES_GAME_1, title: 'Worked example: take the open file' }),
     concept(
       'files-grade',
       'grade',
-      'Step 2: put a rook on that open file.',
+      'Step 2: put a rook on the open file that doesn’t have one yet.',
       '{good} puts a rook on {files}. Stockfish rates it among the best moves here; most other moves let your opponent take the file first.',
-      { first: { prompt: '{side} to move. Step 1: find the open file. Tap any square on it.', explain: '{files} has no pawns: it’s open.' } },
+      { first: { prompt: '{side} to move. Step 1: find an open file. Tap any square on it.', explain: 'Open here: {open}. Your rooks aren’t on {files} yet.' } },
     ),
     walk('b', W_FILES_2, { fen: FILES_GAME_2, title: 'Worked example: contest a file your opponent owns' }),
     concept('files-grade', 'grade', '{side} to move in a quiet position. Use your rooks: play a move that puts one on an open file.', '{good}: rook to {files}. The rook that isn’t doing anything yet is usually the one to move.'),
-    concept('files-tap', 'tap', 'Tap a square on the open file in this position.', 'It’s {files}: no pawns from either side.'),
+    concept('files-tap', 'tap', 'Tap a square on an open file in this position.', 'Open here: {open}, with no pawns from either side.'),
     info(
       'Once a rook owns an open file, it goes **all the way in**: to the **7th rank** (your opponent’s second rank). From there it attacks pawns that are still on their starting squares from the side, where they’re hard to defend, and it boxes the king in.',
       { title: 'The 7th rank', fen: SEVENTH, side: 'w', arrows: [arrow('d1', 'd7', 'green')] },

@@ -931,8 +931,9 @@ const mountConcept =
       /* private mode: in-memory only */
     }
     const sideName = pick.side === 'w' ? 'White' : 'Black';
-    const fileSquares = (pick.files ?? []).flatMap((f) => [1, 2, 3, 4, 5, 6, 7, 8].map((r) => f + r));
-    const keySquares = pick.squares ?? (pick.files ? fileSquares : pick.answers) ?? [];
+    const fileList = (fs: string[]) => (fs.length === 1 ? `the **${fs[0]}-file**` : `the ${fs.map((f) => `**${f}**`).join(' and ')}-files`);
+    const fileSquares = (pick.open ?? pick.files ?? []).flatMap((f) => [1, 2, 3, 4, 5, 6, 7, 8].map((r) => f + r));
+    const keySquares = pick.squares ?? (pick.open || pick.files ? fileSquares : pick.answers) ?? [];
     const filesText = pick.files?.length
       ? pick.files.length === 1
         ? `the **${pick.files[0]}-file**`
@@ -943,6 +944,7 @@ const mountConcept =
         .replaceAll('{side}', sideName)
         .replaceAll('{good}', sanList(pick.good ?? []).replace(/, ([^,]*)$/, ' or $1'))
         .replaceAll('{files}', filesText)
+        .replaceAll('{open}', pick.open?.length ? fileList(pick.open) : filesText)
         .replaceAll('{squares}', sanList(pick.squares ?? pick.answers ?? []).replace(/, ([^,]*)$/, ' and $1'))
         .replace(/(^|[.!?] )the /g, '$1The ');
     if (mode === 'choose') {

@@ -72,6 +72,13 @@ function check(ex: Exercise): void {
         const c = new Chess(it.fen);
         expect(c.turn()).toBe(it.side);
         if (ex.mode === 'tap') expect(it.answers?.length).toBeGreaterThan(0);
+        // Every pawnless file counts as open, including ones a rook already stands on.
+        if (ex.pool.startsWith('files')) {
+          const board = c.board();
+          const open = [...'abcdefgh'].filter((_, f) => board.every((row) => row[f]?.type !== 'p'));
+          expect(it.open, it.fen).toEqual(open);
+          if (ex.mode === 'tap') for (const f of open) expect(it.answers, `${it.fen} ${f}`).toContain(`${f}4`);
+        }
         if (ex.first) expect((it.squares ?? it.files ?? it.answers)?.length, `${ex.pool} key squares`).toBeGreaterThan(0);
         else for (const m of it.good ?? []) expect(tryMove(new Chess(it.fen), m), `${ex.pool} ${m}`).not.toBeNull();
       }
