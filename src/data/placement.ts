@@ -14,6 +14,8 @@ export interface PoolItem {
   answers?: string[];
   good?: string[];
   ok?: string[];
+  /** Plausible moves that are clearly worse, with the drop in win chance (%), for "which is best?" questions. */
+  bad?: { san: string; drop: number }[];
   /** Open files (files pools) or key squares (outpost, weak pawn, worst piece). */
   files?: string[];
   squares?: string[];

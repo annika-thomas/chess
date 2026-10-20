@@ -171,7 +171,8 @@ export interface ConceptExercise extends BaseExercise {
   type: 'concept';
   /** Pool key, e.g. 'files-grade' or 'outpost-tap'. */
   pool: string;
-  mode: 'tap' | 'grade';
+  /** tap a square; play a good move; or pick the best of three candidate moves (choose). */
+  mode: 'tap' | 'grade' | 'choose';
   /**
    * Filled per position: {side} White/Black, {good} the good moves, {files} the open file(s),
    * {squares} the key squares (outpost, weak pawn, worst piece...).

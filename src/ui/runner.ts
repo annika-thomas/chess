@@ -897,21 +897,39 @@ const mountGrade =
   };
 
 /** Recently shown pool positions, so the same board doesn't come straight back. */
-const recentPool: string[] = [];
-
-/** Draw a fresh real position for a positional idea, then ask about it. */
+/** Positions shown recently (kept across sessions), so drills keep showing new ones. */
+const RECENT_KEY = 'chess-mentor.recentPool';
+const recentPool: string[] = (() => {
+  try {
+    return JSON.parse(localStorage.getItem(RECENT_KEY) ?? '[]') as string[];
+  } catch {
+    return [];
+  }
+})();
 const mountConcept =
   (ex: ConceptExercise): Mount =>
   (host, ctx) => {
-    const items = (placementPool as Record<string, PoolItem[]>)[ex.pool] ?? [];
-    const fresh = items.filter((p) => !recentPool.includes(p.fen));
+    const all = (placementPool as Record<string, PoolItem[]>)[ex.pool] ?? [];
+    const choosable = all.filter((p) => (p.bad?.length ?? 0) >= 2 && p.good?.length);
+    // Without mined alternatives yet, "pick the best of three" falls back to "play a good move".
+    const mode = ex.mode === 'choose' && !choosable.length ? 'grade' : ex.mode;
+    const items = mode === 'choose' ? choosable : all;
+    // Avoid everything seen recently; the window scales with the pool so small pools still rotate.
+    const window = Math.floor(items.length * 0.8);
+    const recent = new Set(recentPool.slice(-Math.max(window, 1)));
+    const fresh = items.filter((p) => !recent.has(p.fen));
     const pick = (fresh.length ? fresh : items)[Math.floor(Math.random() * (fresh.length || items.length))];
     if (!pick) {
       ctx.done({ correct: true, grade: 3, quiet: true });
       return;
     }
     recentPool.push(pick.fen);
-    if (recentPool.length > 40) recentPool.shift();
+    if (recentPool.length > 400) recentPool.shift();
+    try {
+      localStorage.setItem(RECENT_KEY, JSON.stringify(recentPool));
+    } catch {
+      /* private mode: in-memory only */
+    }
     const sideName = pick.side === 'w' ? 'White' : 'Black';
     const fileSquares = (pick.files ?? []).flatMap((f) => [1, 2, 3, 4, 5, 6, 7, 8].map((r) => f + r));
     const keySquares = pick.squares ?? (pick.files ? fileSquares : pick.answers) ?? [];
@@ -927,7 +945,34 @@ const mountConcept =
         .replaceAll('{files}', filesText)
         .replaceAll('{squares}', sanList(pick.squares ?? pick.answers ?? []).replace(/, ([^,]*)$/, ' and $1'))
         .replace(/(^|[.!?] )the /g, '$1The ');
-    if (ex.mode === 'tap') {
+    if (mode === 'choose') {
+      const c = new Chess(pick.fen);
+      const cands = [{ san: pick.good![0], drop: 0 }, ...pick.bad!.slice(0, 2)];
+      const arrows = cands.flatMap((m) => {
+        try {
+          const mv = c.move(m.san);
+          c.undo();
+          return [{ from: mv.from, to: mv.to, color: 'blue' as const }];
+        } catch {
+          return [];
+        }
+      });
+      return mountChoice({
+        type: 'choice',
+        prompt: fill(ex.prompt),
+        fen: pick.fen,
+        side: pick.side,
+        arrows,
+        explain: fill(ex.explain),
+        tags: ex.tags,
+        options: cands.map((m, i) =>
+          i === 0
+            ? { text: `**${m.san}**`, correct: true, why: `Yes: **${m.san}** is the strongest of the three.` }
+            : { text: `**${m.san}**`, why: `**${m.san}** gives away about ${m.drop}% of your winning chances (Stockfish). The best of the three was **${pick.good![0]}**.` },
+        ),
+      })(host, ctx);
+    }
+    if (mode === 'tap') {
       return mountTap({ type: 'tap', prompt: fill(ex.prompt), fen: pick.fen, side: pick.side, answers: pick.answers ?? fileSquares, explain: fill(ex.explain), tags: ex.tags })(host, ctx);
     }
     const graded = mountGrade({ type: 'grade', prompt: fill(ex.prompt), fen: pick.fen, side: pick.side, good: pick.good ?? [], ok: pick.ok, explain: fill(ex.explain), tags: ex.tags });

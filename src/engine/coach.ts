@@ -257,15 +257,77 @@ export function buildPatternSprint(): Item[] {
 
 /** Positional practice: placement questions from lessons you've done, mixed and unlabelled. */
 export const POSITIONAL_TAGS = ['activity', 'files', 'outpost', 'pawns', 'bishops', 'space'];
-export function buildPositionalDrill(size = 8, now = Date.now()): Item[] {
-  const pool = CARDS.filter((c) => c.unit.id === 'placement' && isLessonDone(c.lesson.id) && c.exercise.type !== 'info');
-  // Weakest first (lowest recall), then shuffled so the theme isn't predictable.
-  const ranked = pool
+/** Positional ideas with mined real positions, and the lesson that teaches each one. */
+const POSITIONAL_IDEAS: { pool: string; lesson: string; tag: string; idea: string }[] = [
+  { pool: 'files-grade', tag: 'files', lesson: 'place-files', idea: 'put a rook on the open file ({files})' },
+  { pool: 'seventh-grade', tag: 'files', lesson: 'place-files', idea: 'get a rook to the 7th rank' },
+  { pool: 'outpost-grade', tag: 'outpost', lesson: 'place-outposts', idea: 'put a knight on the outpost ({squares})' },
+  { pool: 'worst-grade', tag: 'activity', lesson: 'place-activity', idea: 'improve the worst piece (on {squares})' },
+  { pool: 'passed-grade', tag: 'pawns', lesson: 'place-pawns', idea: 'make use of the passed pawn on {squares}' },
+];
+
+/**
+ * Positional practice: mostly brand-new real positions every time, in mixed formats (find a move without
+ * being told the idea, pick the best of three candidates, spot the feature), plus the weakest principle cards.
+ * Not being told which idea applies is the skill a real game needs (interleaving, Rohrer & Taylor 2007).
+ */
+export function buildPositionalDrill(size = 10, now = Date.now()): Item[] {
+  const done = CARDS.filter((c) => c.unit.id === 'placement' && isLessonDone(c.lesson.id) && c.exercise.type !== 'info');
+  if (!done.length) return [];
+  const doneLessons = new Set(done.map((c) => c.lesson.id));
+  const ideas = shuffleItems(POSITIONAL_IDEAS.filter((i) => doneLessons.has(i.lesson)));
+  const taps = shuffleItems(done.filter((c) => c.exercise.type === 'concept' && c.exercise.mode === 'tap'));
+  const principles = done
+    .filter((c) => c.exercise.type !== 'concept')
     .map((c) => ({ c, r: state.cards[c.id] ? retrievability(state.cards[c.id], now) : 0 }))
     .sort((a, b) => a.r - b.r)
-    .slice(0, size)
-    .map(({ c }) => ({ exercise: c.exercise, tags: c.tags, cardId: c.id }));
-  return shuffleItems(ranked);
+    .map(({ c }) => c);
+  const out: Item[] = [];
+  const label = 'Real position';
+  const nFind = ideas.length ? Math.round(size * 0.35) : 0;
+  const nChoose = ideas.length ? Math.round(size * 0.3) : 0;
+  for (let i = 0; i < nFind; i++) {
+    const idea = ideas[i % ideas.length];
+    const ex: Exercise = {
+      type: 'concept',
+      pool: idea.pool,
+      mode: 'grade',
+      prompt: '{side} to move in a quiet position. No tactics: find a strong positional move.',
+      explain: `The idea here: ${idea.idea}. {good} does that.`,
+      tags: [idea.tag],
+    };
+    out.push({ exercise: ex, tags: [idea.tag], label });
+  }
+  for (let i = 0; i < nChoose; i++) {
+    const idea = ideas[(i + nFind) % ideas.length];
+    const ex: Exercise = {
+      type: 'concept',
+      pool: idea.pool,
+      mode: 'choose',
+      prompt: '{side} to move. Three candidate moves are drawn on the board: which one is best?',
+      explain: `The idea here: ${idea.idea}.`,
+      tags: [idea.tag],
+    };
+    out.push({ exercise: ex, tags: [idea.tag], label });
+  }
+  const rest = size - out.length;
+  const nTap = Math.min(taps.length, Math.max(0, rest - Math.min(2, principles.length)));
+  for (const c of taps.slice(0, nTap)) out.push({ exercise: c.exercise, tags: c.tags, cardId: c.id, label });
+  for (const c of principles.slice(0, size - out.length)) out.push({ exercise: c.exercise, tags: c.tags, cardId: c.id });
+  return spreadOut(shuffleItems(out));
+}
+
+/** Reorder so the same pool and format don't come up twice in a row. */
+function spreadOut(items: Item[]): Item[] {
+  const key = (it: Item) => (it.exercise.type === 'concept' ? `${it.exercise.pool}:${it.exercise.mode}` : it.cardId ?? '');
+  const out: Item[] = [];
+  const left = items.slice();
+  while (left.length) {
+    const prev = out.length ? key(out[out.length - 1]) : '';
+    const i = left.findIndex((it) => key(it) !== prev);
+    out.push(left.splice(i < 0 ? 0 : i, 1)[0]);
+  }
+  return out;
 }
 
 export function buildUnitReview(unitId: string): Item[] {
