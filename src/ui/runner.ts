@@ -969,8 +969,8 @@ const mountConcept =
         tags: ex.tags,
         options: cands.map((m, i) =>
           i === 0
-            ? { text: `**${m.san}**`, correct: true, why: `Yes: **${m.san}** is the strongest of the three.` }
-            : { text: `**${m.san}**`, why: `**${m.san}** gives away about ${m.drop}% of your winning chances (Stockfish). The best of the three was **${pick.good![0]}**.` },
+            ? { text: m.san, correct: true, why: 'The strongest of the three.' }
+            : { text: m.san, why: `**${m.san}** gives away about ${m.drop}% of your winning chances (Stockfish).` },
         ),
       })(host, ctx);
     }

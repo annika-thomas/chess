@@ -137,7 +137,7 @@ export function renderPractice(host: HTMLElement): void {
     card(
       'Positional practice',
       buildPositionalDrill().length
-        ? 'Worst pieces, open files, outposts, weak pawns: mixed questions from your Piece Placement lessons.'
+        ? 'New real positions every time: find the plan, pick the best of three moves, spot open files, outposts and weak pawns.'
         : 'Unlocks with the Piece Placement lessons in Level 2.',
       'Practice',
       () => void startPositional(),
