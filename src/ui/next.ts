@@ -60,7 +60,7 @@ export function candidates(now = Date.now()): Activity[] {
   const lvl = levelById(state.play.level);
   out.push({ kind: 'game', title: `Play a game vs ${lvl.name} (~${lvl.elo})`, why: playedToday ? 'Another game: real games are where everything comes together.' : 'No game yet today. Games are where the patterns have to show up on their own.', effort: false, score: playedToday ? 30 : 70, run: startConfiguredGame });
   if (mixedAvailable() >= 10) {
-    out.push({ kind: 'mixed', title: 'Mixed puzzles', why: 'Unlabelled puzzles from everything you’ve learned: the honest test of recognition.', effort: true, score: 50, run: () => void startMixed() });
+    out.push({ kind: 'mixed', title: 'Mixed puzzles', why: 'Unlabelled puzzles from everything you’ve learned: the test of whether you can spot them in a game.', effort: true, score: 50, run: () => void startMixed() });
     out.push({ kind: 'convert', title: 'Convert the win', why: 'Turn a won position into a won game against a human-like opponent.', effort: false, score: 45, run: () => void startConvert() });
   }
   if (buildPositionalDrill(1, now).length) {

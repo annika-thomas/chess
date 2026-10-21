@@ -22,7 +22,7 @@ export const safetyCheck: Lesson = {
       { title: 'Checks, captures, threats' },
     ),
     info(
-      'Do it in two directions. **Their** checks, captures and threats: am I safe? **Your** checks, captures and threats: can I win something? Most tactics are found by simply looking at every check and capture.',
+      'Do it in two directions. **Their** checks, captures and threats: am I safe? **Your** checks, captures and threats: can I win something? Most tactics are found by looking at every check and capture.',
       { title: 'Both sides of the board' },
     ),
     choice(
@@ -537,8 +537,8 @@ export const thinkingAhead: Lesson = {
     choice(
       'White has two checks here: Qg8+ and Qb8+. Which one is worth looking at further?',
       [
-        yes('Qb8+', 'Right. Qg8+ just loses the queen: the king takes it (Kxg8). Checks are only good if the checking piece is safe or the reply is forced.'),
-        no('Qg8+', 'The king simply captures: Kxg8. Always ask “can they take the checking piece?”'),
+        yes('Qb8+', 'Right. Qg8+ loses the queen: the king takes it (Kxg8). Checks are only good if the checking piece is safe or the reply is forced.'),
+        no('Qg8+', 'The king captures: Kxg8. Always ask “can they take the checking piece?”'),
         no('Neither', 'Look again at Qb8+: can Black take the queen there?'),
       ],
       { fen: GUIDED, side: 'w', tags: ['calculation'] },

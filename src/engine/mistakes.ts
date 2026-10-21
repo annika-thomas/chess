@@ -24,7 +24,7 @@ export function saveMistake(game: PlayedGame, opponent: string, ply: number, fen
   return d;
 }
 
-/** Check every move you made in a game and save the real mistakes. */
+/** Check every move you made in a game and save the mistakes. */
 export async function findMistakes(game: PlayedGame, opponent: string, onProgress?: (done: number, total: number) => void): Promise<MistakeDrill[]> {
   const c = new Chess();
   const fens: string[] = [];

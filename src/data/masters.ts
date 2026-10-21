@@ -2,7 +2,7 @@ import type { LineText, Side } from '../types';
 
 /**
  * Classic games for "Guess the Move". You play one side's moves; the other side is played for you.
- * Every move is checked legal in tests, and every game marked mate really ends in checkmate.
+ * Every move is checked legal in tests, and every game marked mate ends in checkmate.
  */
 export interface MasterGame {
   id: string;
@@ -71,7 +71,7 @@ Kc7
     line: `1.e4 e5 2.Nf3 d6 {The Philidor Defense: you met it in "Punish Mistakes".}
 3.d4 {Strike the center, exactly as in your repertoire.}
 Bg4 {Pins the knight, but Black will have to give up this bishop.}
-4.dxe5 Bxf3 {If 4...dxe5, then 5.Qxd8+ Kxd8 6.Nxe5 simply wins a pawn.}
+4.dxe5 Bxf3 {If 4...dxe5, then 5.Qxd8+ Kxd8 6.Nxe5 wins a pawn.}
 5.Qxf3 dxe5
 6.Bc4 {Develop with a threat: Qxf7 is checkmate.}
 Nf6 {Blocks the queen’s path to f7.}

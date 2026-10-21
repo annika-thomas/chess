@@ -113,7 +113,7 @@ export const activity: Lesson = {
         fen: ACTIVITY,
         side: 'w',
         good: ['Nb1', 'Nb5'],
-        explain: '**Nb5** jumps to an active square right away; **Nb1** heads for d2 and f1 or e5 later. **Nc4?** looks active but the d5 pawn just takes it.',
+        explain: '**Nb5** jumps to an active square right away; **Nb1** heads for d2 and f1 or e5 later. **Nc4?** looks active but the d5 pawn takes it.',
         tags: ['activity'],
       }),
     ),

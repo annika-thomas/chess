@@ -187,7 +187,7 @@ export function lossLabel(cp: number): string {
   return 'about a pawn';
 }
 
-/** A real mistake worth flagging: big loss, and the game wasn't already decided either way. */
+/** A mistake worth flagging: big loss, and the game wasn't already decided either way. */
 export function isMistake(j: MoveJudgement, threshold = 150): boolean {
   if (j.loss < threshold) return false;
   if (j.before <= -500) return false; // already lost

@@ -403,7 +403,7 @@ function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss, s
         deviatedNoted = true;
         const [exp, info] = [...entry.moves.entries()][0];
         if (repertoireOpen()) note(`Your repertoire plays **${exp}** here (${info.line.name}). ${info.note} Keep playing, and I’ll add it to your drills.`, 'warn');
-        else note(`For later: your repertoire plays **${exp}** here (${info.line.name}). You’ll learn it in Level 3. For now, just follow the opening principles.`);
+        else note(`For later: your repertoire plays **${exp}** here (${info.line.name}). You’ll learn it in Level 3. For now, follow the opening principles.`);
       }
     }
     showMoves();
@@ -652,7 +652,7 @@ function startGame(side: Side, level: Level, repertoire: boolean, boss?: Boss, s
           drillBtn.remove();
           mistakeNote.textContent = found.length
             ? `${found.length} mistake${found.length > 1 ? 's' : ''} saved as drills: find them in Practice → Your mistakes.`
-            : 'No real mistakes by the engine’s count. Nice game.';
+            : 'No mistakes by the engine’s count. Nice game.';
         })
         .catch(() => (drillBtn.textContent = 'Couldn’t start the engine'));
     });

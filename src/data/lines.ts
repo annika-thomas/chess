@@ -44,7 +44,7 @@ d6 6.O-O O-O`;
 
 export const BLACKBURNE_AVOID = `1.e4 e5 2.Nf3 Nc6 3.Bc4
 Nd4 {A sneaky trap: the e5 pawn looks free. If 4.Nxe5? then 4...Qg5! attacks your knight and g2.}
-4.Nxd4 {Just trade off the annoying knight.}
+4.Nxd4 {Trade off the annoying knight.}
 exd4 5.c3 {Attack the d4 pawn and build your center. White is comfortable.}`;
 
 export const PETROV = `1.e4 e5 2.Nf3

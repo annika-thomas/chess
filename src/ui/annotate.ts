@@ -187,7 +187,7 @@ export function annotateGame(g: PlayedGame): void {
   // ── Phase 3: compare, diagnose, set homework ──
   function resultsPhase(): void {
     phase = 'results';
-    // Every real mistake becomes a drill you can retry later ("rewrite the ending").
+    // Every mistake becomes a drill you can retry later ("rewrite the ending").
     for (const f of flags) saveMistake(g, levelById(g.level).name, f.ply, fens[f.ply], f.best);
     // A mistake counts as spotted if you marked it, or the opponent move just before it.
     const spotted = flags.filter((f) => marks.has(f.ply) || marks.has(f.ply - 1));
@@ -197,8 +197,8 @@ export function annotateGame(g: PlayedGame): void {
     intro.replaceChildren(
       md(
         flags.length
-          ? `The engine flagged **${flags.length}** of your moves as real mistakes. You had marked **${spotted.length}** of them${spotted.length === flags.length ? ': you see your own mistakes. That’s rare and valuable.' : '. The ones you missed are exactly what to train.'}`
-          : 'The engine found **no real mistakes** in your moves. A clean game. Your notes are saved for next time.',
+          ? `The engine flagged **${flags.length}** of your moves as mistakes. You had marked **${spotted.length}** of them${spotted.length === flags.length ? ': you see your own mistakes. That’s rare and valuable.' : '. The ones you missed are exactly what to train.'}`
+          : 'The engine found **no mistakes** in your moves. A clean game. Your notes are saved for next time.',
       ),
     );
     const causeRows = worst.map((f) => {
@@ -228,7 +228,7 @@ export function annotateGame(g: PlayedGame): void {
     });
     const saveBtn = h('button.btn.primary.wide', { type: 'button' }, flags.length ? 'Save & set my homework' : 'Save');
     footer.replaceChildren(
-      ...(worst.length ? [h('h4.section-title', 'Why did it happen?'), h('p.muted', 'Be honest: this sets your homework. Pick any that apply.'), ...causeRows.map((r) => r.el)] : []),
+      ...(worst.length ? [h('h4.section-title', 'Why did it happen?'), h('p.muted', 'This sets your homework. Pick any that apply.'), ...causeRows.map((r) => r.el)] : []),
       falseAlarms.length
         ? h('p.muted', `You worried about ${falseAlarms.map((p) => moves[p]).join(', ')}, but the engine was fine with ${falseAlarms.length > 1 ? 'them' : 'it'}.`)
         : '',

@@ -477,7 +477,7 @@ const mountSquare =
         missed.push(sq);
         sound.wrong();
       }
-      // Show where it really was (green) and where you tapped (red).
+      // Show where it was (green) and where you tapped (red).
       if (ex.mode === 'tap') {
         board.mark([sq], ok ? [] : [given]);
         if (!ok) target.textContent = `${sq} is here`;
@@ -1103,7 +1103,7 @@ export function runSession(root: HTMLElement, opts: RunOptions): void {
       clear(fbDetail);
       if (r.detail) fbDetail.append(md(r.detail));
       ctx.secondary(null);
-      // Autonomy: you can send a card you truly know away for longer.
+      // Autonomy: you can send a card you know away for longer.
       if (r.correct && opts.mode === 'practice' && slot.item.cardId && !slot.retry) {
         const origin = slot.origin;
         ctx.secondary('Too easy', () => {

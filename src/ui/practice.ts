@@ -152,7 +152,7 @@ export function renderPractice(host: HTMLElement): void {
     mistakes
       ? `${mistakes} position${mistakes > 1 ? 's' : ''} from your own games where you went wrong. Find a better move: any good move counts.`
       : recent.length
-        ? `I can check your last ${recent.length} game${recent.length > 1 ? 's' : ''} with the engine and turn your real mistakes into drills (takes a minute).`
+        ? `I can check your last ${recent.length} game${recent.length > 1 ? 's' : ''} with the engine and turn your mistakes into drills (takes a minute).`
         : 'After a game, tap “Turn my mistakes into drills” and they’ll appear here.',
     mistakes ? 'Rewrite them' : 'Find them',
     () => {

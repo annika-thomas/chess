@@ -1,7 +1,7 @@
 import { state } from './store';
 
 /**
- * Informational progress feedback: real learning signals (unlabelled accuracy over time, past misses fixed,
+ * Informational progress feedback: learning signals (unlabelled accuracy over time, past misses fixed,
  * conversions), so effortful practice reads as progress. Positive informational feedback supports intrinsic
  * motivation, unlike rewards for volume (Deci, Koestner & Ryan 1999).
  */

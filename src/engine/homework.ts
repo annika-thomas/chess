@@ -54,7 +54,7 @@ export function buildPlan(now = Date.now()): string[] {
   else if (step?.needs === 'practice') keys.push(`set:${step.ref.lesson.practice!}`);
   else if (step) keys.push(`lesson:${step.ref.lesson.id}`);
 
-  // Mixed, unlabelled tactics: the honest test of recognition (interleaving research).
+  // Mixed, unlabelled tactics: the test of recognition (interleaving research).
   if (mixedPool(mastered).length >= 10) keys.push('mixed');
   else {
     const mixLevel = LEVELS.findIndex((l, i) => l.mix && setAvailable(l.mix) && levelUnlocked(i + 1) && !state.sets[LEVELS[i + 1]?.test ?? '']?.mastered);

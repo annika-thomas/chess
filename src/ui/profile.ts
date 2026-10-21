@@ -75,7 +75,7 @@ function importSection(): HTMLElement {
   const box = h(
     'section.panel',
     h('h3', 'Your games'),
-    h('p.muted', 'I check your recent games against your repertoire: where you followed it, where you left it, and which openings you actually face. Mistakes become drills.'),
+    h('p.muted', 'I check your recent games against your repertoire: where you followed it, where you left it, and which openings you face. Mistakes become drills.'),
     h('div.inline', sel, input),
     btn,
     status,

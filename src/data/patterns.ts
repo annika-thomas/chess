@@ -274,7 +274,7 @@ Ke6 8.Nc3 {Everything piles on the pinned d5 knight. This is the Fried Liver Att
         choice(
           'The g5 knight is attacking f7. Defend f7 with 4...Qe7?',
           [
-            yes('No: just take it with 4...Qxg5', 'When something attacks you, check first: can you capture the attacker?'),
+            yes('No: take it with 4...Qxg5', 'When something attacks you, check first: can you capture the attacker?'),
             no('Yes: f7 needs defending', 'The attacking knight is undefended. Take it!'),
           ],
           { setup: '1.e4 e5 2.Nf3 Nc6 3.Bc4 Bc5 4.Ng5', side: 'b', tags: ['punish', 'blunder-check'] },

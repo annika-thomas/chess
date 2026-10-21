@@ -13,7 +13,7 @@ export const MIXED_SIZE = 20;
 
 /** Shown before mixed runs: effortful practice reads as poor learning unless someone says why (Bjork; Kirk-Johnson et al.). */
 const WHY_HARDER =
-  'No labels: you have to work out which pattern it is, like in a game. It feels harder than a themed set, and that’s the skill being trained. This score is your honest one.';
+  'No labels: you have to work out which pattern it is, like in a game. It feels harder than a themed set, and that’s the skill being trained. This score shows what you can spot in a game.';
 
 const mastered = (id: string) => !!state.sets[id]?.mastered;
 

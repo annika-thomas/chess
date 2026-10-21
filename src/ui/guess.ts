@@ -17,7 +17,7 @@ export function pointsForLoss(loss: number): { points: number; verdict: string }
   if (loss <= 25) return { points: 2, verdict: 'Excellent alternative!' };
   if (loss <= 80) return { points: 1, verdict: 'Good move.' };
   if (loss <= 200) return { points: 0, verdict: 'Playable, but not the strongest.' };
-  return { points: 0, verdict: 'A real mistake here.' };
+  return { points: 0, verdict: 'A mistake here.' };
 }
 
 export function masterCards(): HTMLElement {

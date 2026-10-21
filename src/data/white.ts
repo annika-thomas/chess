@@ -72,7 +72,7 @@ export const italian: Unit = {
           'What does 9.h3 prevent?',
           [
             yes('...Bg4 pinning your knight, and ...Ng4 hitting f2', 'Yes. A tiny pawn move takes away g4 from Black\'s bishop and knight.'),
-            no('...Qh4 attacks', 'Not really. h3 is about the g4 square.'),
+            no('...Qh4 attacks', 'No. h3 is about the g4 square.'),
             no('Nothing; it is just a waiting move', 'It does something important: it takes the g4 square away.'),
           ],
           { setup: upTo(ITALIAN_MAIN, 17), side: 'w', highlights: ['g4'] },
@@ -144,7 +144,7 @@ export const italian: Unit = {
           '1.e4 e5 2.Nf3 Nc6 3.Bc4 Nd4',
           ['Nxd4'],
           "e5 looks free. Don't take it. Find a safe, good move.",
-          '4.Nxd4 trades off the annoying knight. 4.O-O and 4.c3 are also fine. Just NOT 4.Nxe5?, because of 4...Qg5!',
+          '4.Nxd4 trades off the annoying knight. 4.O-O and 4.c3 are also fine. But not 4.Nxe5?, because of 4...Qg5!',
           { accept: ['O-O', 'c3'], tags: ['blunder-check'] },
         ),
         recall('w', BLACKBURNE_AVOID),
@@ -320,7 +320,7 @@ export const beyond: Unit = {
           'Look at the pawns only. Which is the base of White\'s chain, and what does Black hit it with?',
           [
             yes('d4, with ...c5', 'Right. Attack a chain at its base. That pattern holds in every pawn chain, in every opening.'),
-            no('e5, with ...f6', '...f6 is also a real idea, but the base of the chain is d4.'),
+            no('e5, with ...f6', '...f6 is also an idea, but the base of the chain is d4.'),
             no('c3, with ...b5', 'Not quite.'),
           ],
           { setup: '1.e4 e6 2.d4 d5 3.e5 c5 4.c3 Nc6 5.Nf3', side: 'w', pawnsOnly: true, tags: ['pawn-chain', 'structure'] },

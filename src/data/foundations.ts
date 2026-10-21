@@ -104,7 +104,7 @@ export const principles: Unit = {
         ),
         choice(
           'Look closely: how many minor pieces (knights and bishops) has White developed?',
-          [no('2'), yes('3', 'Nf3, Bc4 and Nc3. Counting development quickly is a real skill: it tells you who is ahead in the race.'), no('4')],
+          [no('2'), yes('3', 'Nf3, Bc4 and Nc3. Counting development quickly is a skill worth having: it tells you who is ahead in the race.'), no('4')],
           { setup: '1.e4 e5 2.Nf3 Nc6 3.Bc4 Nf6 4.Nc3 Bc5', side: 'w', flash: 4000 },
         ),
       ],
@@ -184,7 +184,7 @@ Qa5 4.d4 {Grab the center.} Nf6 5.Nf3 {You have developed 2 pieces plus a center
           [
             no('Nbd2', 'This develops your last minor piece. It is part of the plan.'),
             no('Re1', 'This puts a rook on a central file. Useful.'),
-            yes('Ng5', 'It moves a piece that is already developed, to attack f7 alone. f7 is well defended, and after ...h6 your knight just has to go back. That wastes two tempi.'),
+            yes('Ng5', 'It moves a piece that is already developed, to attack f7 alone. f7 is well defended, and after ...h6 your knight has to go back. That wastes two tempi.'),
           ],
           { setup: '1.e4 e5 2.Nf3 Nc6 3.Bc4 Bc5 4.c3 Nf6 5.d3 d6 6.O-O O-O', side: 'w' },
         ),
@@ -229,7 +229,7 @@ export const survive: Unit = {
           'Your instincts say "develop a knight toward the center." Is 3...Nf6 good here?',
           [
             yes('No: it allows Qxf7#', 'Right. Principles are guides, but checks and threats come first. This is the **blunder check**: before every move, ask what the opponent is threatening.'),
-            no('Yes: it develops and attacks the queen', 'It does attack the queen, but White simply plays Qxf7 and it is checkmate. Always look at checks and threats first.'),
+            no('Yes: it develops and attacks the queen', 'It does attack the queen, but White plays Qxf7 and it is checkmate. Always look at checks and threats first.'),
           ],
           { setup: '1.e4 e5 2.Bc4 Nc6 3.Qh5', side: 'b', tags: ['blunder-check'] },
         ),
@@ -279,7 +279,7 @@ Nf6 {Block again, and develop. Two knights out; White's queen has made 3 moves a
           [
             yes('Nxf7: take on f7, attacking your queen and rook at once (a fork)', 'That’s the idea. But here White moved too early: look at the knight on g5. Is anything defending it?'),
             no('Qh5, checkmate', 'White’s queen is still on d1, so it can’t give checkmate next move.'),
-            no('Nothing: it’s a random move', 'The knight and the bishop both aim at f7. That’s a real threat.'),
+            no('Nothing: it’s a random move', 'The knight and the bishop both aim at f7. That’s a threat.'),
           ],
           { setup: '1.e4 e5 2.Nf3 Nc6 3.Bc4 Bc5 4.Ng5', side: 'b', arrows: [arrow('g5', 'f7', 'red')], tags: ['blunder-check', 'fork'] },
         ),

@@ -49,7 +49,7 @@ export const blackItalian: Unit = {
         choice(
           'Why 3...Bc5 and not 3...Nf6?',
           [
-            yes('3...Nf6 allows 4.Ng5, attacking f7', 'Right. After 3...Bc5, 4.Ng5? just loses a knight to ...Qxg5.'),
+            yes('3...Nf6 allows 4.Ng5, attacking f7', 'Right. After 3...Bc5, 4.Ng5? loses a knight to ...Qxg5.'),
             no('Bishops are better than knights', 'Not in general. It is about avoiding the Fried Liver attack on f7.'),
             no('3...Nf6 is illegal', 'It is legal, and popular, but it leads into sharp theory.'),
           ],
@@ -133,7 +133,7 @@ export const ruyScotch: Unit = {
         choice(
           "After 3...a6 4.Ba4, can White win your e5 pawn with Bxc6 and Nxe5?",
           [
-            yes("Not really: ...Qd4 wins it back", "Right. After Bxc6 dxc6 Nxe5, the move ...Qd4 forks the knight and e4. That's why ...a6 is safe to play."),
+            yes("No: ...Qd4 wins it back", "Right. After Bxc6 dxc6 Nxe5, the move ...Qd4 forks the knight and e4. That's why ...a6 is safe to play."),
             no('Yes, e5 just falls', 'Look deeper: after dxc6 your queen gets active and wins the pawn back.'),
           ],
           { setup: '1.e4 e5 2.Nf3 Nc6 3.Bb5 a6 4.Ba4', side: 'b' },
@@ -366,7 +366,7 @@ export const carlsbad: Unit = {
           "After 4.cxd5 exd5, which of your pieces suddenly has more freedom?",
           [
             yes('The c8 bishop', 'Yes. The e6 pawn moved to d5, so the c8–h3 diagonal opened. That solves the QGD\'s main problem.'),
-            no('The h8 rook', 'Not really.'),
+            no('The h8 rook', 'No.'),
             no('The b8 knight', 'Not especially.'),
           ],
           { setup: '1.d4 d5 2.c4 e6 3.Nc3 Nf6 4.cxd5 exd5', side: 'b', highlights: ['c8'] },

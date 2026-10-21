@@ -27,7 +27,7 @@ export function renderOnboarding(root: HTMLElement, onDone: () => void): void {
       page.append(
         h('div.hero', '♞'),
         h('h1', 'Hi! I’m your chess mentor.'),
-        h('p', 'I’ll teach you openings the way memory actually works: short lessons, recall instead of rereading, and reviews timed right before you would forget.'),
+        h('p', 'I’ll teach you openings the way memory works: short lessons, recall instead of rereading, and reviews timed right before you would forget.'),
         h('label.field', h('span', 'What should I call you?'), input),
         next,
       );
